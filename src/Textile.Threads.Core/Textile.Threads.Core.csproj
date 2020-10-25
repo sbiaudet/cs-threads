@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Multiformats.Base" Version="2.0.2" />
+    <PackageReference Include="BinaryEncoding" Version="1.5.0" />
+    <PackageReference Include="Multiformats.Address" Version="1.1.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Protocols\" />
+  </ItemGroup>
+</Project>

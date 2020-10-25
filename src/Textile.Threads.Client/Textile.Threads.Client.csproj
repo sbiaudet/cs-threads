@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Textile.Threads.Client.Grpc\Textile.Threads.Client.Grpc.csproj" />
+    <ProjectReference Include="..\Textile.Context\Textile.Context.csproj" />
+    <ProjectReference Include="..\Textile.Crypto\Textile.Crypto.csproj" />
+    <ProjectReference Include="..\Textile.Threads.Core\Textile.Threads.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Auth\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client.Web" Version="2.32.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.8" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.32.0" />
+  </ItemGroup>
+</Project>
