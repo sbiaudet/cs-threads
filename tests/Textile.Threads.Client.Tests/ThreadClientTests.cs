@@ -1,7 +1,9 @@
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
+using Json.Schema;
 using Microsoft.Extensions.Options;
 using Textile.Context;
 using Textile.Crypto;
@@ -12,15 +14,18 @@ using Xunit;
 
 namespace Textile.Threads.Client.Tests
 {
-    public class ThreadClientFactoryTests
+    public class ThreadClientTests
     {
+
+        private const string personSchema = "{ \"$id\": \"https://example.com/person.schema.json\", \"$schema\": \"http://json-schema.org/draft-07/schema#\", \"title\": \"Person\", \"type\": \"object\", \"required\": [\"_id\"], \"properties\": { \"_id\": { \"type\": \"string\", \"description\": \"The instance's id.\" }, \"firstName\": { \"type\": \"string\", \"description\": \"The person's first name.\" }, \"lastName\": { \"type\": \"string\", \"description\": \"The person's last name.\" }, \"age\": { \"description\": \"Age in years which must be equal to or greater than zero.\", \"type\": \"integer\", \"minimum\": 0 } } }";
+
         [Fact]
         public void Should_Create_A_New_Client()
         {
             var options = Options.Create(new ThreadContextOptions() { Host = DefaultThreadContextConfigureOptions.DefaultHost });
 
             var context = new ThreadContext(options);
-            var client = new ThreadClient(context, new API.APIClient(GrpcChannel.ForAddress(options.Value.Host)));
+            var client = new ThreadClient(context, null,  new API.APIClient(GrpcChannel.ForAddress(options.Value.Host)));
 
             Assert.NotNull(client);
         }
@@ -87,6 +92,18 @@ namespace Textile.Threads.Client.Tests
             await client.DeleteDBAsync(dbId);
             var after = (await client.ListDBsAsync()).Count;
             Assert.Equal(before, after + 1);
+        }
+
+
+        [Fact]
+        public async Task NewCollection_should_work_and_create_an_empty_object()
+        {
+            var user = Private.FromRandom();
+            var factory = ThreadClientFactory.Create();
+            var client = await factory.CreateClientAsync();
+            var token = await client.GetTokenAsync(user);
+            var db = await client.NewDBAsync(ThreadId.FromRandom());
+            await client.NewCollection(db, new Models.CollectionConfig() { Name = "Person", Schema = JsonSchema.FromText(personSchema) });
         }
     }
 }

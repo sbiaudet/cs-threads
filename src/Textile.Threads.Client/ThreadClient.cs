@@ -12,17 +12,22 @@ using Textile.Threads.Core;
 using System.Collections.Generic;
 using System.Linq;
 using Multiformats.Address;
+using System.Text.Json;
+using Textile.Threads.Client.Models;
+using AutoMapper;
 
 namespace Textile.Threads.Client
 {
     public class ThreadClient : IThreadClient
     {
         private readonly IThreadContext _threadContext;
+        private readonly IMapper _mapper;
         private readonly API.APIClient _apiClient;
 
-        public ThreadClient(IThreadContext threadContext, API.APIClient apiClient)
+        public ThreadClient(IThreadContext threadContext, IMapper mapper, API.APIClient apiClient)
         {
             this._threadContext = threadContext;
+            this._mapper = mapper;
             this._apiClient = apiClient;
         }
 
@@ -131,7 +136,7 @@ namespace Textile.Threads.Client
             };
         }
 
-        public async Task<ThreadId> NewDbFromAdd(string address, string key, IList<CollectionConfig> collections)
+        public async Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionConfig> collections)
         {
             var addr = Multiaddress.Decode(address);
             var keyBytes = ThreadKey.FromString(key).Bytes;
@@ -145,10 +150,10 @@ namespace Textile.Threads.Client
             if(collections != null)
             {
                 //TODO: Finish mapping
-                //collections.Select(c =>
-                //{
-                //    var config = new CollectionConfig();
-                //});
+                request.Collections.AddRange(collections.Select(c =>
+                {
+                    return _mapper.Map<Grpc.CollectionConfig>(c);
+                }).ToArray());
             }
 
             await _apiClient.NewDBFromAddrAsync(request, headers: _threadContext.Metadata);
@@ -157,5 +162,15 @@ namespace Textile.Threads.Client
             return ThreadId.FromString(threadId);
         }
 
+        public async Task NewCollection(ThreadId threadId, Models.CollectionConfig config)
+        {
+            var request = new NewCollectionRequest()
+            {
+                Config = _mapper.Map<Grpc.CollectionConfig>(config),
+                DbID = ByteString.CopyFrom(threadId.Bytes)
+            };
+
+            await _apiClient.NewCollectionAsync(request, headers: _threadContext.Metadata);
+        }
     }
 }

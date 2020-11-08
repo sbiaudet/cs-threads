@@ -9,7 +9,7 @@ namespace Textile.Threads.Core
     public class ThreadId
     {
         public static ulong V1 = 0x01;
-        public static Variant DefaultVariant = default(Variant);
+        public static Variant DefaultVariant = default;
 
         private ulong _version;
         private Variant _variant;
@@ -79,7 +79,7 @@ namespace Textile.Threads.Core
 
         public static ThreadId FromRandom(Variant variant = Variant.Raw, int size = 32)
         {
-            return new ThreadId(ThreadId.V1, Variant.Raw, ThreadId.GenerateRandomBytes(size));
+            return new ThreadId(ThreadId.V1, variant, ThreadId.GenerateRandomBytes(size));
         }
 
         public static ThreadId FromString(string encodedId)
@@ -92,10 +92,10 @@ namespace Textile.Threads.Core
         {
             var copy = bytes.AsSpan();
             var decodeVersion = ThreadId.DecodeVersion(copy);
-            copy = copy.Slice(decodeVersion.Size);
+            copy = copy[decodeVersion.Size..];
             var decodeVariant = ThreadId.DecodeVariant(copy);
 
-            var randomBytes = copy.Slice(decodeVariant.Size).ToArray();
+            var randomBytes = copy[decodeVariant.Size..].ToArray();
 
             return new ThreadId(decodeVersion.Version, decodeVariant.Variant, randomBytes);
         }

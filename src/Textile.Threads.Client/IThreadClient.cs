@@ -15,6 +15,7 @@ namespace Textile.Threads.Client
         Task DeleteDBAsync(ThreadId threadId);
         Task<IDictionary<string, GetDBInfoReply>> ListDBsAsync();
         Task<DBInfo> GetDbInfoAsync(ThreadId dbId);
-        Task<ThreadId> NewDbFromAdd(string address, string key, IList<CollectionConfig> collections);
+        Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionConfig> collections);
+        Task NewCollection(ThreadId threadId, Models.CollectionConfig config);
     }
 }

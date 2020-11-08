@@ -7,8 +7,10 @@ using Xunit;
 
 namespace Textile.Threads.Client.Tests
 {
-    public class ThreadClientTests
+    public class ThreadClientFactoryTests
     {
+
+
         [Fact]
         public void Should_Create_A_New_Factory()
         {
@@ -24,5 +26,6 @@ namespace Textile.Threads.Client.Tests
             Assert.NotNull(client);
         }
 
+        
     }
 }
