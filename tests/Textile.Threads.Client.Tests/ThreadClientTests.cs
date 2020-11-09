@@ -75,7 +75,7 @@ namespace Textile.Threads.Client.Tests
             var name2 = "name2";
             var db = await client.NewDBAsync(ThreadId.FromRandom(), name2);
             var dbList = await client.ListDBsAsync();
-            Assert.True(dbList.Count > 1, "Expected 1 or more database");
+            Assert.True(dbList.Count >= 1, "Expected 1 or more database");
             Assert.Contains(dbList, db => name2 == db.Value.Name);
         }
 
