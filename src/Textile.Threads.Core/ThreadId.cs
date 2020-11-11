@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace Textile.Threads.Core
 {
-    public class ThreadId
+    public class ThreadId : IEquatable<ThreadId>
     {
         public static ulong V1 = 0x01;
         public static Variant DefaultVariant = default;
@@ -131,13 +131,8 @@ namespace Textile.Threads.Core
             {
                 return false;
             }
-            else
-            {
-                var objToCompare = (ThreadId)obj;
-                return this.Version == objToCompare.Version &&
-                       this.Variant == objToCompare.Variant &&
-                       Enumerable.SequenceEqual(this.RandomBytes,objToCompare.RandomBytes);
-            }
+
+            return this.Equals((ThreadId)obj);
         }
 
         public override int GetHashCode() => (this.Version, this.Variant, this.RandomBytes).GetHashCode();
@@ -151,5 +146,9 @@ namespace Textile.Threads.Core
         {
             return Multibase.Encode(encoding, this.Bytes);
         }
+
+        public bool Equals(ThreadId other)
+            => (this.Version, this.Variant, this.RandomBytes).Equals((other.Version, other.Variant, other.RandomBytes));
+        
     }
 }
