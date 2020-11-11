@@ -46,8 +46,8 @@ namespace Textile.Threads.Client.Tests
             var user = Private.FromRandom();
             var factory = ThreadClientFactory.Create();
             var client = await factory.CreateClientAsync();
-            var token = await client.GetTokenAsync(user);
-            var db = await client.NewDBAsync(ThreadId.FromRandom(), "test");
+            _ = await client.GetTokenAsync(user);
+            _ = await client.NewDBAsync(ThreadId.FromRandom(), "test");
         }
 
         [Fact]
@@ -56,7 +56,7 @@ namespace Textile.Threads.Client.Tests
             var user = Private.FromRandom();
             var factory = ThreadClientFactory.Create();
             var client = await factory.CreateClientAsync();
-            var token = await client.GetTokenAsync(user);
+            _ = await client.GetTokenAsync(user);
             var dbId = await client.NewDBAsync(ThreadId.FromRandom());
 
             var invites = await client.GetDbInfoAsync(dbId);
@@ -86,7 +86,7 @@ namespace Textile.Threads.Client.Tests
 
             var factory = ThreadClientFactory.Create();
             var client = await factory.CreateClientAsync();
-            var token = await client.GetTokenAsync(user);
+            _ = await client.GetTokenAsync(user);
             var dbId = await client.NewDBAsync(ThreadId.FromRandom());
             var before = (await client.ListDBsAsync()).Count;
             await client.DeleteDBAsync(dbId);
@@ -101,7 +101,7 @@ namespace Textile.Threads.Client.Tests
             var user = Private.FromRandom();
             var factory = ThreadClientFactory.Create();
             var client = await factory.CreateClientAsync();
-            var token = await client.GetTokenAsync(user);
+            _ = await client.GetTokenAsync(user);
             var db = await client.NewDBAsync(ThreadId.FromRandom());
             await client.NewCollection(db, new Models.CollectionConfig() { Name = "Person", Schema = JsonSchema.FromText(personSchema) });
         }

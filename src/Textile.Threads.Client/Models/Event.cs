@@ -1,5 +1,6 @@
 ﻿using System;
-namespace Textile.Threads.Client
+
+namespace Textile.Threads.Client.Models
 {
     public class Event
     {

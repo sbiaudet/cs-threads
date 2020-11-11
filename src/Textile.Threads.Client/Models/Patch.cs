@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace Textile.Threads.Client
+namespace Textile.Threads.Client.Models
 {
     public class Patch
     {

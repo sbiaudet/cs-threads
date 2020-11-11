@@ -99,7 +99,7 @@ namespace Textile.Threads.Client
                 request.Name = name;
             }
 
-            var reply = await _apiClient.NewDBAsync(request, headers: _threadContext.WithThread(dbId.ToString()).Metadata);
+            await _apiClient.NewDBAsync(request, headers: _threadContext.WithThread(dbId.ToString()).Metadata);
             return dbId;
         }
 
@@ -171,6 +171,72 @@ namespace Textile.Threads.Client
             };
 
             await _apiClient.NewCollectionAsync(request, headers: _threadContext.Metadata);
+        }
+
+
+        public async Task UpdateCollection(ThreadId threadId, Models.CollectionConfig config)
+        {
+            var request = new UpdateCollectionRequest()
+            {
+                Config = _mapper.Map<Grpc.CollectionConfig>(config),
+                DbID = ByteString.CopyFrom(threadId.Bytes)
+            };
+
+            await _apiClient.UpdateCollectionAsync(request, headers: _threadContext.Metadata);
+        }
+
+        public async Task DeleteCollection(ThreadId threadId, string name)
+        {
+            var request = new DeleteCollectionRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                Name = name
+            };
+
+            await _apiClient.DeleteCollectionAsync(request, headers: _threadContext.Metadata);
+        }
+
+        public async Task Create<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
+        {
+            var request = new CreateRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName
+            };
+
+            var serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
+            request.Instances.AddRange(serializedValues);
+
+            var reply = await _apiClient.CreateAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+        }
+
+
+        public async Task Save<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
+        {
+            var request = new SaveRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName
+            };
+
+            var serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
+            request.Instances.AddRange(serializedValues);
+
+            var reply = await _apiClient.SaveAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+        }
+
+        public async Task<IList<T>> Find<T>(ThreadId threadId, string collectionName, Query query, CancellationToken cancellationToken = default)
+        {
+            var request = new FindRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName,
+                QueryJSON = ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes(query))
+            };
+
+            var reply = await _apiClient.FindAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            return reply.Instances.Select(i => JsonSerializer.Deserialize<T>(i.ToByteArray())).ToList();
         }
     }
 }

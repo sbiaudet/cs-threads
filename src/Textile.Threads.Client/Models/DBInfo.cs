@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Textile.Threads.Client
+namespace Textile.Threads.Client.Models
 {
     public class DBInfo
     {

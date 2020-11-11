@@ -16,7 +16,7 @@ namespace Textile.Core.Tests
         }
 
         [Fact]
-        public void should_be_able_to_round_trip_to_and_from_bytes()
+        public void Should_be_able_to_round_trip_to_and_from_bytes()
         {
             var i = ThreadId.FromRandom(Variant.Raw, 16);
             var b = i.Bytes;

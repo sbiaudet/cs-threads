@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Textile.Crypto;
 using Textile.Threads.Client.Grpc;
 using Textile.Threads.Core;
+using Textile.Threads.Client.Models;
+using System.Threading;
 
 namespace Textile.Threads.Client
 {
@@ -17,5 +19,10 @@ namespace Textile.Threads.Client
         Task<DBInfo> GetDbInfoAsync(ThreadId dbId);
         Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionConfig> collections);
         Task NewCollection(ThreadId threadId, Models.CollectionConfig config);
+        Task<IList<T>> Find<T>(ThreadId threadId, string collectionName, Query query, CancellationToken cancellationToken = default);
+        Task Save<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default);
+        Task Create<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default);
+        Task DeleteCollection(ThreadId threadId, string name);
+        Task UpdateCollection(ThreadId threadId, Models.CollectionConfig config);
     }
 }

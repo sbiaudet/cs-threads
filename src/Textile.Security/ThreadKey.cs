@@ -10,8 +10,8 @@ namespace Textile.Security
         // KeyBytes is the length of GCM key.
         private const int KeyBytes = 32;
 
-        private byte[] _serviceKey;
-        private byte[] _readKey;
+        private readonly byte[] _serviceKey;
+        private readonly byte[] _readKey;
 
         public ThreadKey(byte[] serviceKey, byte[] readKey)
         {
@@ -65,7 +65,7 @@ namespace Textile.Security
 
             var copy = bytes.AsSpan();
             var serviceKey = copy.Slice(0, KeyBytes).ToArray();
-            var readKey = bytes.Length == KeyBytes * 2 ? copy.Slice(KeyBytes).ToArray() : default(byte[]);
+            var readKey = bytes.Length == KeyBytes * 2 ? copy[KeyBytes..].ToArray() : default;
 
             return new ThreadKey(serviceKey, readKey);
         }
