@@ -140,10 +140,7 @@ namespace Textile.Threads.Core
             }
         }
 
-        //public override int GetHashCode()
-        //{
-        //    return Tuple.Create(this.Version, this.Variant, this.RandomBytes).GetHashCode();
-        //}
+        public override int GetHashCode() => (this.Version, this.Variant, this.RandomBytes).GetHashCode();
 
         public override string ToString()
         {

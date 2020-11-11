@@ -18,17 +18,7 @@ namespace Textile.Threads.Client.Tests
     {
 
         private const string personSchema = "{ \"$id\": \"https://example.com/person.schema.json\", \"$schema\": \"http://json-schema.org/draft-07/schema#\", \"title\": \"Person\", \"type\": \"object\", \"required\": [\"_id\"], \"properties\": { \"_id\": { \"type\": \"string\", \"description\": \"The instance's id.\" }, \"firstName\": { \"type\": \"string\", \"description\": \"The person's first name.\" }, \"lastName\": { \"type\": \"string\", \"description\": \"The person's last name.\" }, \"age\": { \"description\": \"Age in years which must be equal to or greater than zero.\", \"type\": \"integer\", \"minimum\": 0 } } }";
-
-        [Fact]
-        public void Should_Create_A_New_Client()
-        {
-            var options = Options.Create(new ThreadContextOptions() { Host = DefaultThreadContextConfigureOptions.DefaultHost });
-
-            var context = new ThreadContext(options);
-            var client = new ThreadClient(context, null,  new API.APIClient(GrpcChannel.ForAddress(options.Value.Host)));
-
-            Assert.NotNull(client);
-        }
+        private const string schema2 = "{ \"properties\": { \"_id\": { \"type\": \"string\" }, \"fullName\": { \"type\": \"string\" }, \"age\": { \"type\": \"integer\", \"minimum\": 0 } }";
 
         [Fact]
         public async Task Should_Get_A_New_Token()

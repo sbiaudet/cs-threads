@@ -18,6 +18,7 @@ using AutoMapper;
 
 namespace Textile.Threads.Client
 {
+
     public class ThreadClient : IThreadClient
     {
         private readonly IThreadContext _threadContext;
@@ -30,7 +31,6 @@ namespace Textile.Threads.Client
             this._mapper = mapper;
             this._apiClient = apiClient;
         }
-
        
         public Task<string> GetTokenAsync(IIdentity identity)
             => GetTokenChallenge(identity.Public.ToString(), challenge => Task.FromResult(identity.Sign(challenge)));
