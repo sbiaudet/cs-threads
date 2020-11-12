@@ -148,7 +148,7 @@ namespace Textile.Threads.Core
         }
 
         public bool Equals(ThreadId other)
-            => (this.Version, this.Variant, this.RandomBytes).Equals((other.Version, other.Variant, other.RandomBytes));
+            => Enumerable.SequenceEqual(this.Bytes, other.Bytes);
         
     }
 }

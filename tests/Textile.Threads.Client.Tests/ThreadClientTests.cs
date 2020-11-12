@@ -18,7 +18,8 @@ namespace Textile.Threads.Client.Tests
     {
 
         private const string personSchema = "{ \"$id\": \"https://example.com/person.schema.json\", \"$schema\": \"http://json-schema.org/draft-07/schema#\", \"title\": \"Person\", \"type\": \"object\", \"required\": [\"_id\"], \"properties\": { \"_id\": { \"type\": \"string\", \"description\": \"The instance's id.\" }, \"firstName\": { \"type\": \"string\", \"description\": \"The person's first name.\" }, \"lastName\": { \"type\": \"string\", \"description\": \"The person's last name.\" }, \"age\": { \"description\": \"Age in years which must be equal to or greater than zero.\", \"type\": \"integer\", \"minimum\": 0 } } }";
-        private const string schema2 = "{ \"properties\": { \"_id\": { \"type\": \"string\" }, \"fullName\": { \"type\": \"string\" }, \"age\": { \"type\": \"integer\", \"minimum\": 0 } }";
+
+        private const string schema2 = "{ \"properties\": { \"_id\": { \"type\": \"string\" }, \"fullName\": { \"type\": \"string\" }, \"age\": { \"type\": \"integer\", \"minimum\": 0 } } }";
 
         [Fact]
         public async Task Should_Get_A_New_Token()
@@ -94,6 +95,18 @@ namespace Textile.Threads.Client.Tests
             _ = await client.GetTokenAsync(user);
             var db = await client.NewDBAsync(ThreadId.FromRandom());
             await client.NewCollection(db, new Models.CollectionConfig() { Name = "Person", Schema = JsonSchema.FromText(personSchema) });
+        }
+
+        [Fact]
+        public async Task UpdateCollection_should_update_an_existing_collection()
+        {
+            var user = Private.FromRandom();
+            var factory = ThreadClientFactory.Create();
+            var client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            var db = await client.NewDBAsync(ThreadId.FromRandom());
+            await client.NewCollection(db, new Models.CollectionConfig() { Name = "PersonToUpdate", Schema = JsonSchema.FromText(personSchema) });
+            await client.UpdateCollection(db, new Models.CollectionConfig() { Name = "PersonToUpdate", Schema = JsonSchema.FromText(schema2) });
         }
     }
 }
