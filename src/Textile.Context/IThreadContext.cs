@@ -13,7 +13,7 @@ namespace Textile.Context
         ThreadContext WithApiKey(string apiKey);
         ThreadContext WithApiSignature(ApiSig apiSignature);
         ThreadContext WithContext(ThreadContext context);
-        ThreadContext WithKeyInfo(KeyInfo key, DateTime? date = null);
+        ThreadContext WithKeyInfo(KeyInfo key, DateTime? keyDate = null);
         ThreadContext WithOrganization(string organization);
         ThreadContext WithSession(string session);
         ThreadContext WithThread(string threadId);

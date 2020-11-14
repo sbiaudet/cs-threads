@@ -7,26 +7,20 @@ using LibP2P.Crypto;
 
 namespace Textile.Crypto
 {
-    public class Public : IPublic
+    public class PublicKey : IPublicKey
     {
-        private readonly PublicKey _publicKey;
+        private readonly LibP2P.Crypto.PublicKey _publicKey;
 
-        public Public(byte[] pubKey) : this(new Ed25519PublicKey(pubKey))
+        public PublicKey(byte[] pubKey) : this(new Ed25519PublicKey(pubKey))
         {
         }
 
-        public Public(PublicKey publicKey)
+        public PublicKey(LibP2P.Crypto.PublicKey publicKey)
         {
             _publicKey = publicKey;
         }
 
-        public byte[] Bytes
-        {
-            get
-            {
-                return _publicKey.Bytes;
-            }
-        }
+        public byte[] Bytes => _publicKey.Bytes;
 
         public bool Verify(byte[] data, byte[] signature)
         {
@@ -38,10 +32,10 @@ namespace Textile.Crypto
             return Multibase.Encode(MultibaseEncoding.Base32Lower, this.Bytes);
         }
 
-        public static Public FromString(string str)
+        public static PublicKey FromString(string str)
         {
-            var decoded = Multibase.Decode(str, out string _);
-            return new Public(PublicKey.Unmarshal(decoded));
+            byte[] decoded = Multibase.Decode(str, out string _);
+            return new PublicKey(LibP2P.Crypto.PublicKey.Unmarshal(decoded));
         }
     }
 }

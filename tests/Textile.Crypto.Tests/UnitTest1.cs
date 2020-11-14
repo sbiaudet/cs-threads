@@ -6,11 +6,11 @@ namespace Textile.Crypto.Tests
     public class UnitTest1
     {
         [Fact]
-        public void Should_Be_Able_To_Serialize_And_Recover_Identities()
+        public void ShouldBeAbleToSerializeAndRecoverIdentities()
         {
-            var id = Private.FromRandom();
-            var str = id.ToString();
-            var back = Private.FromString(str);
+            PrivateKey id = PrivateKey.FromRandom();
+            string str = id.ToString();
+            PrivateKey back = PrivateKey.FromString(str);
 
             Assert.Equal(id.GetHashCode(), back.GetHashCode());
         }

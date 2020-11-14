@@ -7,54 +7,52 @@ using LibP2P.Crypto;
 
 namespace Textile.Crypto
 {
-    public class Private : IPrivate
+    public class PrivateKey : IPrivate
     {
 
-        private readonly PrivateKey _privateKey;
+        private readonly LibP2P.Crypto.PrivateKey _privateKey;
 
-        public Private(byte[] secretKey) : this(new Ed25519PrivateKey(secretKey))
+        public PrivateKey(byte[] secretKey) : this(new Ed25519PrivateKey(secretKey))
         {
 
         }
 
-        internal Private(PrivateKey privateKey)
+        internal PrivateKey(LibP2P.Crypto.PrivateKey privateKey)
         {
             this._privateKey = privateKey;
         }
 
-        public IPublic Public
+        public IPublicKey PublicKey
         {
             get
             {
-                var publicKey = _privateKey.GetPublic();
-                return new Public(publicKey);
+                LibP2P.Crypto.PublicKey publicKey = _privateKey.GetPublic();
+                return new PublicKey(publicKey);
             }
         }
 
-        public byte[] Bytes
-        {
-            get
-            {
-                return _privateKey.Bytes;
-            }
-        }
+        public byte[] Bytes => _privateKey.Bytes;
 
         public byte[] Sign(byte[] data)
-            => _privateKey.Sign(data);
-
-        public static Private FromRawSeed(byte[] rawSeed)
-         => new Private(rawSeed);
-
-        public static Private FromRandom()
         {
-            var privateKey = KeyPair.Generate(KeyType.Ed25519).PrivateKey;
-            return new Private(privateKey);
+            return _privateKey.Sign(data);
         }
 
-        public static Private FromString(string str)
+        public static PrivateKey FromRawSeed(byte[] rawSeed)
         {
-            var decoded = Multibase.Decode(str, out string _);
-            return new Private(PrivateKey.Unmarshal(decoded));
+            return new(rawSeed);
+        }
+
+        public static PrivateKey FromRandom()
+        {
+            LibP2P.Crypto.PrivateKey privateKey = KeyPair.Generate(KeyType.Ed25519).PrivateKey;
+            return new PrivateKey(privateKey);
+        }
+
+        public static PrivateKey FromString(string str)
+        {
+            byte[] decoded = Multibase.Decode(str, out string _);
+            return new PrivateKey(LibP2P.Crypto.PrivateKey.Unmarshal(decoded));
         }
 
         public override string ToString()

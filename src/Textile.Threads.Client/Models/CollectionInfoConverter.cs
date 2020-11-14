@@ -4,16 +4,17 @@ using System.Text.Json;
 using AutoMapper;
 using Google.Protobuf;
 using Json.Schema;
+using Textile.Threads.Client.Grpc;
 
 namespace Textile.Threads.Client.Models
-{ 
+{
     public class CollectionInfoConverter :
         ITypeConverter<CollectionInfo, Grpc.CollectionConfig>,
         ITypeConverter<Grpc.GetCollectionInfoReply, CollectionInfo>
     {
-        public Grpc.CollectionConfig Convert(CollectionInfo source, Grpc.CollectionConfig destination, ResolutionContext context)
+        public CollectionConfig Convert(CollectionInfo source, CollectionConfig destination, ResolutionContext context)
         {
-            var config = new Grpc.CollectionConfig()
+            CollectionConfig config = new()
             {
                 Name = source.Name,
                 Schema = ByteString.CopyFromUtf8(JsonSerializer.Serialize(source.Schema)),
@@ -23,7 +24,7 @@ namespace Textile.Threads.Client.Models
 
             if (source.Indexes != null)
             {
-                var indexes = source.Indexes.Select(i => new Grpc.Index()
+                Grpc.Index[] indexes = source.Indexes.Select(i => new Grpc.Index()
                 {
                     Path = i.Path,
                     Unique = i.Unique
@@ -36,7 +37,7 @@ namespace Textile.Threads.Client.Models
 
         public CollectionInfo Convert(Grpc.GetCollectionInfoReply source, CollectionInfo destination, ResolutionContext context)
         {
-            var config = new CollectionInfo()
+            CollectionInfo config = new()
             {
                 Name = source.Name,
                 Schema = JsonSerializer.Deserialize<JsonSchema>(source.Schema.ToByteArray()),

@@ -9,7 +9,7 @@ namespace Textile.Context
 {
     public class ThreadContext : IThreadContext
     {
-        private readonly object syncObj = new object();
+        private readonly object syncObj = new();
 
         public ThreadContext(IOptions<ThreadContextOptions> options)
         {
@@ -17,7 +17,7 @@ namespace Textile.Context
 
             if (options.Value.KeyInfo != null)
             {
-                WithKeyInfo(options.Value.KeyInfo);
+                _ = WithKeyInfo(options.Value.KeyInfo);
             }
         }
 
@@ -26,38 +26,50 @@ namespace Textile.Context
         public string Host { get; set; }
 
         public ThreadContext WithSession(string session)
-            => this.WithEntry(ContextKeys.SessionKey, session);
-
+        {
+            return this.WithEntry(ContextKeys.SessionKey, session);
+        }
 
         public ThreadContext WithThread(string threadId)
-            => this.WithEntry(ContextKeys.ThreadIdKey, threadId);
-
+        {
+            return this.WithEntry(ContextKeys.ThreadIdKey, threadId);
+        }
 
         public ThreadContext WithThreadName(string threadName)
-            => this.WithEntry(ContextKeys.ThreadNameKey, threadName);
+        {
+            return this.WithEntry(ContextKeys.ThreadNameKey, threadName);
+        }
 
         public ThreadContext WithOrganization(string organization)
-           => this.WithEntry(ContextKeys.OrganizationKey, organization);
+        {
+            return WithEntry(ContextKeys.OrganizationKey, organization);
+        }
 
         public ThreadContext WithApiKey(string apiKey)
-           => this.WithEntry(ContextKeys.ApiKey, apiKey);
+        {
+            return WithEntry(ContextKeys.ApiKey, apiKey);
+        }
 
         public ThreadContext WithApiSignature(ApiSig apiSignature)
-           => this.WithEntry(ContextKeys.ApiSignatureKey, apiSignature.Sig)
-                  .WithEntry(ContextKeys.ApiSignatureRawMessageKey, apiSignature.Msg);
+        {
+            return this.WithEntry(ContextKeys.ApiSignatureKey, apiSignature.Sig)
+                             .WithEntry(ContextKeys.ApiSignatureRawMessageKey, apiSignature.Msg);
+        }
 
         public ThreadContext WithToken(string token)
-            => this.WithEntry(ContextKeys.AuthorizationKey, $"bearer {token}");
-
-        public ThreadContext WithKeyInfo(KeyInfo key, DateTime? date = null)
         {
-            var context = this;
+            return this.WithEntry(ContextKeys.AuthorizationKey, $"bearer {token}");
+        }
+
+        public ThreadContext WithKeyInfo(KeyInfo key, DateTime? keyDate = null)
+        {
+            ThreadContext context = this;
 
             context = context.WithApiKey(key.Key);
 
             if (key.Secret != null)
             {
-                var apiSig = ApiSig.CreateApiSig(key.Secret, date);
+                ApiSig apiSig = ApiSig.CreateApiSig(key.Secret, keyDate);
                 context = context.WithApiSignature(apiSig);
             }
 
@@ -68,9 +80,9 @@ namespace Textile.Context
         {
             lock (syncObj)
             {
-                var mergedEntries = this.Metadata.Union(context.Metadata).ToList();
+                System.Collections.Generic.List<Entry> mergedEntries = this.Metadata.Union(context.Metadata).ToList();
                 this.Metadata.Clear();
-                foreach (var entry in mergedEntries)
+                foreach (Entry entry in mergedEntries)
                 {
                     this.Metadata.Add(entry);
                 }
@@ -84,10 +96,10 @@ namespace Textile.Context
             {
                 lock (syncObj)
                 {
-                    var oldEntry = this.Metadata.Get(key);
+                    Entry oldEntry = this.Metadata.Get(key);
                     if (oldEntry != null)
                     {
-                        this.Metadata.Remove(oldEntry);
+                        _ = this.Metadata.Remove(oldEntry);
                     }
                     this.Metadata.Add(new Entry(key, value));
                 }

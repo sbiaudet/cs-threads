@@ -13,20 +13,19 @@ namespace Textile.Threads.Client.Tests
 
 
         [TestMethod]
-        public void Should_Create_A_New_Factory()
+        public void ShouldCreateANewFactory()
         {
-            var factory = ThreadClientFactory.Create();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
             Assert.IsNotNull(factory);
         }
 
         [TestMethod]
-        public async Task Should_Create_A_New_Client()
+        public async Task ShouldCreateANewClient()
         {
-            var factory = ThreadClientFactory.Create();
-            var client = await factory.CreateClientAsync();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
             Assert.IsNotNull(client);
         }
 
-        
     }
 }

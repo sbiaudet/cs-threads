@@ -4,9 +4,6 @@ using Microsoft.Extensions.Options;
 using Textile.Context;
 using Textile.Threads.Client;
 using Textile.Threads.Client.Grpc;
-using System.Net.Http;
-using Grpc.Net.Client.Web;
-using Grpc.Core;
 using AutoMapper;
 using Textile.Threads.Client.Models;
 
@@ -34,7 +31,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddGrpcClient<API.APIClient>((serviceProvider, options) =>
             {
-                var context = serviceProvider.GetRequiredService<IThreadContext>();
+                IThreadContext context = serviceProvider.GetRequiredService<IThreadContext>();
                 options.Address = new Uri(context.Host);
             });
 

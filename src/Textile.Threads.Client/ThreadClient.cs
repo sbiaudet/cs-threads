@@ -31,30 +31,32 @@ namespace Textile.Threads.Client
             this._mapper = mapper;
             this._apiClient = apiClient;
         }
-       
-        public Task<string> GetTokenAsync(IIdentity identity, CancellationToken cancellationToken = default)
-            => GetTokenChallenge(identity.Public.ToString(), challenge => Task.FromResult(identity.Sign(challenge)), cancellationToken);
 
-        public async Task<String> GetTokenChallenge(string publicKey, Func<byte[], Task<byte[]>> VerifySignature, CancellationToken cancellationToken = default)
+        public Task<string> GetTokenAsync(IIdentity identity, CancellationToken cancellationToken = default)
+        {
+            return GetTokenChallenge(identity.PublicKey.ToString(), challenge => Task.FromResult(identity.Sign(challenge)), cancellationToken);
+        }
+
+        public async Task<string> GetTokenChallenge(string publicKey, Func<byte[], Task<byte[]>> VerifySignature, CancellationToken cancellationToken = default)
         {
             string token = string.Empty;
 
-            using var call = _apiClient.GetToken(headers: _threadContext.Metadata,  deadline: DateTime.UtcNow.AddSeconds(5));
+            using AsyncDuplexStreamingCall<GetTokenRequest, GetTokenReply> call = _apiClient.GetToken(headers: _threadContext.Metadata, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: cancellationToken);
 
-            var keyReq = new GetTokenRequest()
+            GetTokenRequest keyReq = new()
             {
                 Key = publicKey
             };
 
-            var readTask = Task.Run(async () =>
+            Task readTask = Task.Run(async () =>
             {
-                await foreach(var message in call.ResponseStream.ReadAllAsync())
+                await foreach (GetTokenReply message in call.ResponseStream.ReadAllAsync())
                 {
                     if (!message.Challenge.IsEmpty)
                     {
-                        var challenge = message.Challenge.ToByteArray();
-                        var signature = await VerifySignature(challenge);
-                        var signReq = new GetTokenRequest
+                        byte[] challenge = message.Challenge.ToByteArray();
+                        byte[] signature = await VerifySignature(challenge);
+                        GetTokenRequest signReq = new()
                         {
                             Signature = ByteString.CopyFrom(signature)
                         };
@@ -79,16 +81,16 @@ namespace Textile.Threads.Client
             }
             else
             {
-                throw new Exception("");
+                throw call.GetStatus().DebugException;
             }
-            
+
         }
 
         public async Task<ThreadId> NewDBAsync(ThreadId threadId, string name = null, CancellationToken cancellationToken = default)
         {
-            var dbId = threadId ?? ThreadId.FromRandom();
+            ThreadId dbId = threadId ?? ThreadId.FromRandom();
 
-            var request = new NewDBRequest()
+            NewDBRequest request = new()
             {
                 DbID = ByteString.CopyFrom(dbId.Bytes)
             };
@@ -105,7 +107,7 @@ namespace Textile.Threads.Client
 
         public async Task DeleteDBAsync(ThreadId threadId, CancellationToken cancellationToken = default)
         {
-            var request = new DeleteDBRequest()
+            DeleteDBRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes)
             };
@@ -115,20 +117,20 @@ namespace Textile.Threads.Client
 
         public async Task<IDictionary<string, GetDBInfoReply>> ListDBsAsync(CancellationToken cancellationToken = default)
         {
-            var request = new ListDBsRequest();
+            ListDBsRequest request = new();
 
-            var list = await _apiClient.ListDBsAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            ListDBsReply list = await _apiClient.ListDBsAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             return list.Dbs.ToDictionary(db => ThreadId.FromBytes(db.DbID.ToByteArray()).ToString(), db => db.Info);
         }
 
-        public async Task<DBInfo> GetDbInfoAsync(ThreadId threadId, CancellationToken cancellationToken = default)
+        public async Task<DBInfo> GetDbInfoAsync(ThreadId dbId, CancellationToken cancellationToken = default)
         {
-            var request = new GetDBInfoRequest()
+            GetDBInfoRequest request = new()
             {
-                DbID = ByteString.CopyFrom(threadId.Bytes)
+                DbID = ByteString.CopyFrom(dbId.Bytes)
             };
-            
-            var dbInfo = await _apiClient.GetDBInfoAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            GetDBInfoReply dbInfo = await _apiClient.GetDBInfoAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             return new DBInfo()
             {
                 Key = ThreadKey.FromBytes(dbInfo.Key.ToByteArray()).ToString(),
@@ -138,16 +140,16 @@ namespace Textile.Threads.Client
 
         public async Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionInfo> collections, CancellationToken cancellationToken = default)
         {
-            var addr = Multiaddress.Decode(address);
-            var keyBytes = ThreadKey.FromString(key).Bytes;
+            Multiaddress addr = Multiaddress.Decode(address);
+            byte[] keyBytes = ThreadKey.FromString(key).Bytes;
 
-            var request = new NewDBFromAddrRequest()
+            NewDBFromAddrRequest request = new()
             {
                 Addr = ByteString.CopyFrom(addr.ToBytes()),
                 Key = ByteString.CopyFrom(keyBytes)
             };
 
-            if(collections != null)
+            if (collections != null)
             {
                 //TODO: Finish mapping
                 request.Collections.AddRange(collections.Select(c =>
@@ -158,13 +160,13 @@ namespace Textile.Threads.Client
 
             await _apiClient.NewDBFromAddrAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             //TODO: Get the threadID and Address
-            var threadId = string.Empty;
+            string threadId = string.Empty;
             return ThreadId.FromString(threadId);
         }
 
         public async Task NewCollection(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
         {
-            var request = new NewCollectionRequest()
+            NewCollectionRequest request = new()
             {
                 Config = _mapper.Map<Grpc.CollectionConfig>(config),
                 DbID = ByteString.CopyFrom(threadId.Bytes)
@@ -176,7 +178,7 @@ namespace Textile.Threads.Client
 
         public async Task UpdateCollection(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
         {
-            var request = new UpdateCollectionRequest()
+            UpdateCollectionRequest request = new()
             {
                 Config = _mapper.Map<Grpc.CollectionConfig>(config),
                 DbID = ByteString.CopyFrom(threadId.Bytes)
@@ -187,7 +189,7 @@ namespace Textile.Threads.Client
 
         public async Task DeleteCollection(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
-            var request = new DeleteCollectionRequest()
+            DeleteCollectionRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes),
                 Name = name
@@ -199,80 +201,80 @@ namespace Textile.Threads.Client
 
         public async Task<CollectionInfo> GetCollectionInfo(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
-            var request = new GetCollectionInfoRequest()
+            GetCollectionInfoRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes),
                 Name = name
             };
 
-            var reply = await _apiClient.GetCollectionInfoAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            GetCollectionInfoReply reply = await _apiClient.GetCollectionInfoAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             return _mapper.Map<CollectionInfo>(reply);
         }
 
         public async Task<IList<Models.CollectionInfo>> ListCollection(ThreadId threadId, CancellationToken cancellationToken = default)
         {
-            var request = new ListCollectionsRequest()
+            ListCollectionsRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes)
             };
 
-            var reply = await _apiClient.ListCollectionsAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            ListCollectionsReply reply = await _apiClient.ListCollectionsAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             return _mapper.Map<List<Models.CollectionInfo>>(reply.Collections.ToList());
         }
 
 
         public async Task<IList<Grpc.Index>> GetCollectionIndexes(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
-            var request = new GetCollectionIndexesRequest()
+            GetCollectionIndexesRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes),
                 Name = name
             };
 
-            var reply = await _apiClient.GetCollectionIndexesAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            GetCollectionIndexesReply reply = await _apiClient.GetCollectionIndexesAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             return reply.Indexes.ToList();
         }
 
         public async Task<IList<string>> Create<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
         {
-            var request = new CreateRequest()
+            CreateRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes),
                 CollectionName = collectionName
             };
 
-            var serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
+            IEnumerable<ByteString> serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
             request.Instances.AddRange(serializedValues);
 
-            var reply = await _apiClient.CreateAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            CreateReply reply = await _apiClient.CreateAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
             return reply.InstanceIDs.ToList();
         }
 
 
         public async Task Save<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
         {
-            var request = new SaveRequest()
+            SaveRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes),
                 CollectionName = collectionName
             };
 
-            var serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
+            IEnumerable<ByteString> serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
             request.Instances.AddRange(serializedValues);
 
-            var reply = await _apiClient.SaveAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            SaveReply reply = await _apiClient.SaveAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
         }
 
         public async Task<IList<T>> Find<T>(ThreadId threadId, string collectionName, Query query, CancellationToken cancellationToken = default)
         {
-            var request = new FindRequest()
+            FindRequest request = new()
             {
                 DbID = ByteString.CopyFrom(threadId.Bytes),
                 CollectionName = collectionName,
                 QueryJSON = ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes(query))
             };
 
-            var reply = await _apiClient.FindAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            FindReply reply = await _apiClient.FindAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
 
             return reply.Instances.Select(i => JsonSerializer.Deserialize<T>(i.ToByteArray())).ToList();
         }

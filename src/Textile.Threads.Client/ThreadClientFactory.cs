@@ -15,18 +15,20 @@ namespace Textile.Threads.Client
 
         public Task<IThreadClient> CreateClientAsync()
         {
-            var threadClient = serviceProvider.GetRequiredService<IThreadClient>();
+            IThreadClient threadClient = serviceProvider.GetRequiredService<IThreadClient>();
             return Task.FromResult(threadClient);
         }
 
         public static IThreadClientFactory Create()
-            => Create(options => { });
+        {
+            return Create(options => { });
+        }
 
         public static IThreadClientFactory Create(Action<ThreadClientOptions> configure)
         {
-            var services = new ServiceCollection();
+            ServiceCollection services = new();
             services.AddTextile(configure);
-            var serviceProvider = services.BuildServiceProvider();
+            ServiceProvider serviceProvider = services.BuildServiceProvider();
             return serviceProvider.GetRequiredService<IThreadClientFactory>();
         }
     }

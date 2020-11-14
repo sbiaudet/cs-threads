@@ -17,7 +17,7 @@ namespace Textile.Threads.Client.Auth
         /// <returns>The interceptor.</returns>
         public static AsyncAuthInterceptor FromAccessToken(string accessToken)
         {
-            GrpcPreconditions.CheckNotNull(accessToken);
+            _ = GrpcPreconditions.CheckNotNull(accessToken);
             return new AsyncAuthInterceptor((context, metadata) =>
             {
                 metadata.Add(CreateBearerTokenHeader(accessToken));

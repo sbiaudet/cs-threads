@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Textile.Crypto
 {
-    public interface IPublic
+    public interface IPublicKey
     {
         bool Verify(byte[] data, byte[] signature);
 

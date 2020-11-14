@@ -15,21 +15,21 @@ namespace Textile.Security
 
         public ThreadKey(byte[] serviceKey, byte[] readKey)
         {
-            this._serviceKey = serviceKey;
-            this._readKey = readKey;
+            _serviceKey = serviceKey;
+            _readKey = readKey;
         }
 
-        public bool IsDefined => this._serviceKey != null;
-        public bool CanRead => this._readKey != null;
+        public bool IsDefined => _serviceKey != null;
+        public bool CanRead => _readKey != null;
 
         public byte[] Bytes {
             get
             {
-                var bytes = this._serviceKey;
+                byte[] bytes = _serviceKey;
 
                 if (CanRead)
                 {
-                    bytes = bytes.Concat(this._readKey).ToArray();
+                    bytes = bytes.Concat(_readKey).ToArray();
                 }
                 return bytes;
             }
@@ -37,17 +37,17 @@ namespace Textile.Security
 
         public override string ToString()
         {
-            return Multibase.Encode(MultibaseEncoding.Base32Lower, this.Bytes).ToString();
+            return Multibase.Encode(MultibaseEncoding.Base32Lower, Bytes).ToString();
         }
 
         public static ThreadKey FromRandom(bool withRead = true)
         {
-            using var rngCsp = RandomNumberGenerator.Create();
+            using RandomNumberGenerator rngCsp = RandomNumberGenerator.Create();
 
-            var randomService = new byte[KeyBytes];
+            byte[] randomService = new byte[KeyBytes];
             rngCsp.GetBytes(randomService);
 
-            var randomRead = new byte[KeyBytes];
+            byte[] randomRead = new byte[KeyBytes];
             if (withRead)
             {
                 rngCsp.GetBytes(randomRead);
@@ -58,22 +58,22 @@ namespace Textile.Security
 
         public static ThreadKey FromBytes(byte[] bytes)
         {
-            if(bytes.Length != KeyBytes && bytes.Length != KeyBytes * 2)
+            if (bytes.Length is not KeyBytes and not KeyBytes * 2)
             {
-                throw new Exception("Invalid Key");
+                throw new InvalidOperationException("Invalid Key");
             }
 
-            var copy = bytes.AsSpan();
-            var serviceKey = copy.Slice(0, KeyBytes).ToArray();
-            var readKey = bytes.Length == KeyBytes * 2 ? copy[KeyBytes..].ToArray() : default;
+            Span<byte> copy = bytes.AsSpan();
+            byte[] serviceKey = copy.Slice(0, KeyBytes).ToArray();
+            byte[] readKey = bytes.Length == KeyBytes * 2 ? copy[KeyBytes..].ToArray() : default;
 
             return new ThreadKey(serviceKey, readKey);
         }
 
         public static ThreadKey FromString(string s)
         {
-            var data = Multibase.Decode(s, out MultibaseEncoding _);
-            return ThreadKey.FromBytes(data);
+            byte[] data = Multibase.Decode(s, out MultibaseEncoding _);
+            return FromBytes(data);
         }
     }
 }

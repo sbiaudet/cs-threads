@@ -10,7 +10,7 @@ namespace Textile.Threads.Client.Models
     }
 
 
-    public static class PatchType 
+    public static class PatchType
     {
         public const string Delete = "delete";
         public const string Create = "create";

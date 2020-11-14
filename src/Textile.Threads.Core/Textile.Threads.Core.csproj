@@ -8,6 +8,10 @@
     <PackageReference Include="Multiformats.Base" Version="2.0.2" />
     <PackageReference Include="BinaryEncoding" Version="1.5.0" />
     <PackageReference Include="Multiformats.Address" Version="1.1.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="5.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Protocols\" />

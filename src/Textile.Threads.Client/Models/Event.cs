@@ -2,9 +2,9 @@
 
 namespace Textile.Threads.Client.Models
 {
-    public class Event
+    public class CollectionEvent
     {
-        public Event()
+        public CollectionEvent()
         {
         }
 

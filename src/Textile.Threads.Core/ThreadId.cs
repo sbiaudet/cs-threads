@@ -8,8 +8,7 @@ namespace Textile.Threads.Core
 {
     public class ThreadId : IEquatable<ThreadId>
     {
-        public static ulong V1 = 0x01;
-        public static Variant DefaultVariant = default;
+        private static readonly ulong V1 = 0x01;
 
         private ulong _version;
         private Variant _variant;
@@ -29,7 +28,7 @@ namespace Textile.Threads.Core
             {
                 if (value != 1)
                 {
-                    throw new Exception($"expected 1 as the id version number, got: ${ value }.");
+                    throw new InvalidOperationException($"expected 1 as the id version number, got: ${ value }.");
                 }
                 _version = value;
             }
@@ -42,7 +41,7 @@ namespace Textile.Threads.Core
             {
                 if (!(value.HasFlag(Variant.Raw) || value.HasFlag(Variant.AccessControlled)))
                 {
-                    throw new Exception($"invalid variant.");
+                    throw new InvalidOperationException($"invalid variant.");
                 }
                 _variant = value;
             }
@@ -55,24 +54,22 @@ namespace Textile.Threads.Core
             {
                 if (value.Length < 16)
                 {
-                    throw new Exception($"random component too small.");
+                    throw new InvalidOperationException($"random component too small.");
                 }
                 _randomBytes = value;
             }
         }
 
-        public byte[] Bytes
-        {
-            get => Binary.Varint.GetBytes(this.Version)
+        public byte[] Bytes => Binary.Varint.GetBytes(this.Version)
                    .Concat(Binary.Varint.GetBytes((ulong)this.Variant)).ToArray()
                    .Concat(this.RandomBytes).ToArray();
-        }
+
         public bool IsDefined => this.Bytes.Length > 0;
 
         public static byte[] GenerateRandomBytes(int size = 32)
         {
-            var randomBytes = new byte[size];
-            using var rngCsp = RandomNumberGenerator.Create();
+            byte[] randomBytes = new byte[size];
+            using RandomNumberGenerator rngCsp = RandomNumberGenerator.Create();
             rngCsp.GetBytes(randomBytes);
             return randomBytes;
         }
@@ -84,58 +81,51 @@ namespace Textile.Threads.Core
 
         public static ThreadId FromString(string encodedId)
         {
-            var data = Multibase.Decode(encodedId, out MultibaseEncoding _);
+            byte[] data = Multibase.Decode(encodedId, out MultibaseEncoding _);
             return ThreadId.FromBytes(data);
         }
 
         public static ThreadId FromBytes(byte[] bytes)
         {
-            var copy = bytes.AsSpan();
-            var decodeVersion = ThreadId.DecodeVersion(copy);
+            Span<byte> copy = bytes.AsSpan();
+            (int Size, ulong Version) decodeVersion = ThreadId.DecodeVersion(copy);
             copy = copy[decodeVersion.Size..];
-            var decodeVariant = ThreadId.DecodeVariant(copy);
+            (int Size, Variant Variant) decodeVariant = ThreadId.DecodeVariant(copy);
 
-            var randomBytes = copy[decodeVariant.Size..].ToArray();
+            byte[] randomBytes = copy[decodeVariant.Size..].ToArray();
 
             return new ThreadId(decodeVersion.Version, decodeVariant.Variant, randomBytes);
         }
 
         public static (int Size, ulong Version) DecodeVersion(Span<byte> bytes)
         {
-            var size = Binary.Varint.Read(bytes, out ulong version);
-            if (version != 1)
-            {
-                throw new Exception($"expected 1 as the id version number, got: { version }.");
-            }
-
-            return (size, version);
+            int size = Binary.Varint.Read(bytes, out ulong version);
+            return version != 1 ? throw new InvalidOperationException($"expected 1 as the id version number, got: { version }.") : (size, version);
         }
 
 
         public static (int Size, Variant Variant) DecodeVariant(Span<byte> bytes)
         {
-            var variantSize = Binary.Varint.Read(bytes,  out ulong variant);
+            int variantSize = Binary.Varint.Read(bytes,  out ulong variant);
 
             return (variantSize, (Variant)variant);
         }
 
-        public string GetEncoding(string encodedID)
+        public static string GetEncoding(string encodedID)
         {
-            Multibase.Decode(encodedID, out string encoding);
+            _ = Multibase.Decode(encodedID, out string encoding);
             return encoding;
         }
 
         public override bool Equals(object obj)
         {
-            if ((obj == null) || !this.GetType().Equals(obj.GetType()))
-            {
-                return false;
-            }
-
-            return this.Equals((ThreadId)obj);
+            return obj != null && this.GetType().Equals(obj.GetType()) && this.Equals((ThreadId)obj);
         }
 
-        public override int GetHashCode() => (this.Version, this.Variant, this.RandomBytes).GetHashCode();
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Version, Variant, RandomBytes);
+        }
 
         public override string ToString()
         {
@@ -148,7 +138,8 @@ namespace Textile.Threads.Core
         }
 
         public bool Equals(ThreadId other)
-            => Enumerable.SequenceEqual(this.Bytes, other.Bytes);
-        
+        {
+            return Enumerable.SequenceEqual(this.Bytes, other.Bytes);
+        }
     }
 }

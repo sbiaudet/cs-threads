@@ -18,7 +18,10 @@ namespace Textile.Threads.Client.Models
             return new Criterion(fieldPath, null);
         }
 
-        public Criterion And(string fieldpath) => new Criterion(fieldpath, this);
+        public Criterion And(string fieldpath)
+        {
+            return new(fieldpath, this);
+        }
 
         public Query Or(Query query)
         {

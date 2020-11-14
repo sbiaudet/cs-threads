@@ -1,6 +1,7 @@
 ﻿using System;
 namespace Textile.Threads.Core
 {
+    [Flags]
     public enum Variant : ulong
     {
         Raw = 0x55,

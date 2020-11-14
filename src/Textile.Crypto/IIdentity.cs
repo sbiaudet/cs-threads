@@ -6,7 +6,7 @@ namespace Textile.Crypto
     public interface IIdentity
     {
         byte[] Sign(byte[] data);
-        public IPublic Public { get; }
+        public IPublicKey PublicKey { get; }
         public byte[] Bytes { get; }
     }
 

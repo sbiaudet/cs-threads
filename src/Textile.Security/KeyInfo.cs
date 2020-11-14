@@ -1,4 +1,5 @@
 ﻿using System;
+
 namespace Textile.Security
 {
     public class KeyInfo

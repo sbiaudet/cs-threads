@@ -18,12 +18,35 @@ namespace Textile.Threads.Client.Models
         public Query Query { get; set; }
 
 
-        public Query Eq(object value) => Create(Operation.Eq, value);
-        public Query Ne(object value) => Create(Operation.Ne, value);
-        public Query Gt(object value) => Create(Operation.Gt, value);
-        public Query Lt(object value) => Create(Operation.Lt, value);
-        public Query Ge(object value) => Create(Operation.Ge, value);
-        public Query Le(object value) => Create(Operation.Le, value);
+        public Query Eq(object value)
+        {
+            return Create(Operation.Eq, value);
+        }
+
+        public Query Ne(object value)
+        {
+            return Create(Operation.Ne, value);
+        }
+
+        public Query Gt(object value)
+        {
+            return Create(Operation.Gt, value);
+        }
+
+        public Query Lt(object value)
+        {
+            return Create(Operation.Lt, value);
+        }
+
+        public Query Ge(object value)
+        {
+            return Create(Operation.Ge, value);
+        }
+
+        public Query Le(object value)
+        {
+            return Create(Operation.Le, value);
+        }
 
         private Query Create(Operation operation, object value)
         {

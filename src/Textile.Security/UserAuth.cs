@@ -14,7 +14,7 @@ namespace Textile.Security
 
         public static UserAuth CreateUserAuth(string key,  string secret, DateTime? date, string token)
         {
-            var partial = ApiSig.CreateApiSig(secret, date);
+            ApiSig partial = ApiSig.CreateApiSig(secret, date);
 
             return new UserAuth()
             {

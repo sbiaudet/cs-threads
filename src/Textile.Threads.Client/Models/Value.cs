@@ -17,7 +17,7 @@ namespace Textile.Threads.Client.Models
 
         public static QueryValue FromObject(object obj)
         {
-            if(obj is string @string)
+            if (obj is string @string)
             {
                 return new QueryValue()
                 {
@@ -33,7 +33,9 @@ namespace Textile.Threads.Client.Models
                 };
             }
 
+#pragma warning disable IDE0046 // Convert to conditional expression
             if (obj is float single)
+#pragma warning restore IDE0046 // Convert to conditional expression
             {
                 return new QueryValue()
                 {
