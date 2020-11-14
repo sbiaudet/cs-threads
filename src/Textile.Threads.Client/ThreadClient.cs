@@ -136,7 +136,7 @@ namespace Textile.Threads.Client
             };
         }
 
-        public async Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionConfig> collections)
+        public async Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionInfo> collections)
         {
             var addr = Multiaddress.Decode(address);
             var keyBytes = ThreadKey.FromString(key).Bytes;
@@ -162,7 +162,7 @@ namespace Textile.Threads.Client
             return ThreadId.FromString(threadId);
         }
 
-        public async Task NewCollection(ThreadId threadId, Models.CollectionConfig config)
+        public async Task NewCollection(ThreadId threadId, Models.CollectionInfo config)
         {
             var request = new NewCollectionRequest()
             {
@@ -174,7 +174,7 @@ namespace Textile.Threads.Client
         }
 
 
-        public async Task UpdateCollection(ThreadId threadId, Models.CollectionConfig config)
+        public async Task UpdateCollection(ThreadId threadId, Models.CollectionInfo config)
         {
             var request = new UpdateCollectionRequest()
             {
@@ -196,7 +196,44 @@ namespace Textile.Threads.Client
             await _apiClient.DeleteCollectionAsync(request, headers: _threadContext.Metadata);
         }
 
-        public async Task Create<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
+
+        public async Task<CollectionInfo> GetCollectionInfo(ThreadId threadId, string name)
+        {
+            var request = new GetCollectionInfoRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                Name = name
+            };
+
+            var reply = await _apiClient.GetCollectionInfoAsync(request, headers: _threadContext.Metadata);
+            return _mapper.Map<CollectionInfo>(reply);
+        }
+
+        public async Task<IList<Models.CollectionInfo>> ListCollection(ThreadId threadId, CancellationToken cancellationToken = default)
+        {
+            var request = new ListCollectionsRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes)
+            };
+
+            var reply = await _apiClient.ListCollectionsAsync(request, headers: _threadContext.Metadata);
+            return _mapper.Map<List<Models.CollectionInfo>>(reply.Collections.ToList());
+        }
+
+
+        public async Task<IList<Grpc.Index>> GetCollectionIndexes(ThreadId threadId, string name, CancellationToken cancellationToken = default)
+        {
+            var request = new GetCollectionIndexesRequest()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                Name = name
+            };
+
+            var reply = await _apiClient.GetCollectionIndexesAsync(request, headers: _threadContext.Metadata);
+            return reply.Indexes.ToList();
+        }
+
+        public async Task<IList<string>> Create<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
         {
             var request = new CreateRequest()
             {
@@ -208,6 +245,7 @@ namespace Textile.Threads.Client
             request.Instances.AddRange(serializedValues);
 
             var reply = await _apiClient.CreateAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            return reply.InstanceIDs.ToList();
         }
 
 

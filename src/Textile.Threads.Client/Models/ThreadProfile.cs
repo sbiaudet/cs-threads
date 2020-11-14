@@ -7,7 +7,8 @@ namespace Textile.Threads.Client.Models
     {
         public ThreadProfile()
         {
-            CreateMap<Models.CollectionConfig, Grpc.CollectionConfig>().ConvertUsing<CollectionConfigConverter>();
+            CreateMap<CollectionInfo, Grpc.CollectionConfig>().ConvertUsing<CollectionInfoConverter>();
+            CreateMap<Grpc.GetCollectionInfoReply, CollectionInfo>().ConvertUsing<CollectionInfoConverter>();
         }
     }
 }
