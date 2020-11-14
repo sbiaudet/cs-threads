@@ -7,6 +7,7 @@ namespace Textile.Security
 {
     public class ThreadKey
     {
+
         // KeyBytes is the length of GCM key.
         private const int KeyBytes = 32;
 
