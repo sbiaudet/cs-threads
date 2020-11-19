@@ -12,7 +12,9 @@ namespace Textile.Threads.Client.Models
 
         public string FieldPath { get; set; }
         public Operation Operation { get; set; }
-        public QueryValue Value { get; set; }
+
+        [JsonConverter(typeof(QueryValueConverter))]
+        public object Value { get; set; }
 
         [JsonIgnore]
         public Query Query { get; set; }
@@ -50,10 +52,11 @@ namespace Textile.Threads.Client.Models
 
         private Query Create(Operation operation, object value)
         {
+            Query query = this.Query ?? new Query();
             this.Operation = operation;
-            this.Value = QueryValue.FromObject(value);
-            this.Query.Ands.Add(this);
-            return this.Query;
+            this.Value = value;
+            query.Ands.Add(this);
+            return query;
         }
     }
 

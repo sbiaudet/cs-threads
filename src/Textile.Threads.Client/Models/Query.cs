@@ -10,8 +10,17 @@ namespace Textile.Threads.Client.Models
         }
 
         public Sort Sort { get; set; }
+
         public List<Criterion> Ands { get; set; } = new List<Criterion>();
+
         public List<Query> Ors { get; set; } = new List<Query>();
+
+        public int Limit { get; set; }
+
+        public int Skip { get; set; }
+
+        public string Index { get; set; }
+
 
         public static Criterion Where(string fieldPath)
         {
@@ -26,6 +35,24 @@ namespace Textile.Threads.Client.Models
         public Query Or(Query query)
         {
             this.Ors.Add(query);
+            return this;
+        }
+
+        public Query LimitTo(int limit)
+        {
+            this.Limit = limit;
+            return this;
+        }
+
+        public Query SkipNum(int num)
+        {
+            this.Skip = num;
+            return this;
+        }
+
+        public Query UseIndex(string path)
+        {
+            this.Index = path;
             return this;
         }
 

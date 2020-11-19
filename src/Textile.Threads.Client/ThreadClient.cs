@@ -164,7 +164,7 @@ namespace Textile.Threads.Client
             return ThreadId.FromString(threadId);
         }
 
-        public async Task NewCollection(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
+        public async Task NewCollectionAsync(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
         {
             NewCollectionRequest request = new()
             {
@@ -176,7 +176,7 @@ namespace Textile.Threads.Client
         }
 
 
-        public async Task UpdateCollection(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
+        public async Task UpdateCollectionAsync(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
         {
             UpdateCollectionRequest request = new()
             {
@@ -187,7 +187,7 @@ namespace Textile.Threads.Client
             await _apiClient.UpdateCollectionAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
         }
 
-        public async Task DeleteCollection(ThreadId threadId, string name, CancellationToken cancellationToken = default)
+        public async Task DeleteCollectionAsync(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
             DeleteCollectionRequest request = new()
             {
@@ -199,7 +199,7 @@ namespace Textile.Threads.Client
         }
 
 
-        public async Task<CollectionInfo> GetCollectionInfo(ThreadId threadId, string name, CancellationToken cancellationToken = default)
+        public async Task<CollectionInfo> GetCollectionInfoAsync(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
             GetCollectionInfoRequest request = new()
             {
@@ -211,7 +211,7 @@ namespace Textile.Threads.Client
             return _mapper.Map<CollectionInfo>(reply);
         }
 
-        public async Task<IList<Models.CollectionInfo>> ListCollection(ThreadId threadId, CancellationToken cancellationToken = default)
+        public async Task<IList<Models.CollectionInfo>> ListCollectionAsync(ThreadId threadId, CancellationToken cancellationToken = default)
         {
             ListCollectionsRequest request = new()
             {
@@ -223,7 +223,7 @@ namespace Textile.Threads.Client
         }
 
 
-        public async Task<IList<Grpc.Index>> GetCollectionIndexes(ThreadId threadId, string name, CancellationToken cancellationToken = default)
+        public async Task<IList<Grpc.Index>> GetCollectionIndexesAsync(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
             GetCollectionIndexesRequest request = new()
             {
@@ -235,7 +235,7 @@ namespace Textile.Threads.Client
             return reply.Indexes.ToList();
         }
 
-        public async Task<IList<string>> Create<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
+        public async Task<IList<string>> CreateAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default)
         {
             CreateRequest request = new()
             {
@@ -251,7 +251,7 @@ namespace Textile.Threads.Client
         }
 
 
-        public async Task Save<T>(ThreadId threadId, string collectionName, T[] values, CancellationToken cancellationToken = default)
+        public async Task SaveAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default)
         {
             SaveRequest request = new()
             {
@@ -263,9 +263,48 @@ namespace Textile.Threads.Client
             request.Instances.AddRange(serializedValues);
 
             SaveReply reply = await _apiClient.SaveAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            if (!string.IsNullOrEmpty(reply.TransactionError))
+            {
+                throw new InvalidOperationException(reply.TransactionError);
+            }
+
         }
 
-        public async Task<IList<T>> Find<T>(ThreadId threadId, string collectionName, Query query, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(ThreadId threadId, string collectionName, IEnumerable<string> values, CancellationToken cancellationToken = default)
+        {
+            DeleteRequest request = new()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName,
+            };
+
+            request.InstanceIDs.AddRange(values);
+
+            DeleteReply reply = await _apiClient.DeleteAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            if (!string.IsNullOrEmpty(reply.TransactionError))
+            {
+                throw new InvalidOperationException(reply.TransactionError);
+            }
+        }
+
+        public async Task<bool> Has(ThreadId threadId, string collectionName, IEnumerable<string> values, CancellationToken cancellationToken = default)
+        {
+            HasRequest request = new()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName,
+            };
+
+            request.InstanceIDs.AddRange(values);
+
+            HasReply reply = await _apiClient.HasAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            return reply.Exists;
+        }
+
+        public async Task<IList<T>> FindAsync<T>(ThreadId threadId, string collectionName, Query query, CancellationToken cancellationToken = default)
         {
             FindRequest request = new()
             {
@@ -277,6 +316,27 @@ namespace Textile.Threads.Client
             FindReply reply = await _apiClient.FindAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
 
             return reply.Instances.Select(i => JsonSerializer.Deserialize<T>(i.ToByteArray())).ToList();
+        }
+
+        public async Task<T> FindByIdAsync<T>(ThreadId threadId, string collectionName, string instanceId, CancellationToken cancellationToken = default)
+        {
+            FindByIDRequest request = new()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName,
+                InstanceID = instanceId
+            };
+
+            FindByIDReply reply = await _apiClient.FindByIDAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            return JsonSerializer.Deserialize<T>(reply.Instance.ToStringUtf8());
+        }
+
+
+        public ReadTransaction ReadTransaction(ThreadId threadId, string collectionName)
+        {
+
+            return new ReadTransaction(_threadContext, _apiClient, threadId, collectionName);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace Textile.Core.Tests
     public class ThreadIdTests
     {
         [Fact]
-        public void ShouldBeAbleToCreateARandomID()
+        public void Should_Be_Able_To_Create_A_RandomID()
         {
             ThreadId i = ThreadId.FromRandom(Variant.Raw, 16);
             Assert.NotNull(i);
@@ -16,7 +16,7 @@ namespace Textile.Core.Tests
         }
 
         [Fact]
-        public void ShouldBeAbleToRoundTripToAndFromBytes()
+        public void Should_Be_Able_To_Round_Trip_To_And_From_Bytes()
         {
             ThreadId i = ThreadId.FromRandom(Variant.Raw, 16);
             byte[] b = i.Bytes;

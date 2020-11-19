@@ -106,9 +106,9 @@ namespace Textile.Threads.Client.Tests
             _ = await client.GetTokenAsync(user);
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
             CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
-            await client.NewCollection(db, collection);
+            await client.NewCollectionAsync(db, collection);
 
-            IList<Models.CollectionInfo> collections = await client.ListCollection(db);
+            IList<Models.CollectionInfo> collections = await client.ListCollectionAsync(db);
             Assert.IsTrue(collections.Any(c=> c.Name == "Person"));
         }
 
@@ -120,10 +120,10 @@ namespace Textile.Threads.Client.Tests
             IThreadClient client = await factory.CreateClientAsync();
             _ = await client.GetTokenAsync(user);
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
-            await client.NewCollection(db, new Models.CollectionInfo() { Name = "PersonToUpdate", Schema = JsonSchema.FromText(personSchema) });
-            await client.UpdateCollection(db, new Models.CollectionInfo() { Name = "PersonToUpdate", Schema = JsonSchema.FromText(schema2) });
+            await client.NewCollectionAsync(db, new Models.CollectionInfo() { Name = "PersonToUpdate", Schema = JsonSchema.FromText(personSchema) });
+            await client.UpdateCollectionAsync(db, new Models.CollectionInfo() { Name = "PersonToUpdate", Schema = JsonSchema.FromText(schema2) });
 
-            CollectionInfo updatedCollection = await client.GetCollectionInfo(db, "PersonToUpdate");
+            CollectionInfo updatedCollection = await client.GetCollectionInfoAsync(db, "PersonToUpdate");
             Assert.AreEqual(3,updatedCollection.Schema.Keywords.FirstOrDefault().GetSubschemas().Count());
         }
 
@@ -137,14 +137,14 @@ namespace Textile.Threads.Client.Tests
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
             CollectionInfo collection = new() { Name = "CollectionToDelete", Schema = JsonSchema.FromText(personSchema) };
 
-            await client.NewCollection(db, collection);
+            await client.NewCollectionAsync(db, collection);
 
-            IList<CollectionInfo> beforeDeleteCollections = await client.ListCollection(db);
+            IList<CollectionInfo> beforeDeleteCollections = await client.ListCollectionAsync(db);
             Assert.IsTrue(beforeDeleteCollections.Any(c => c.Name == "CollectionToDelete"));
 
-            await client.DeleteCollection(db, "CollectionToDelete");
+            await client.DeleteCollectionAsync(db, "CollectionToDelete");
 
-            IList<CollectionInfo> afterDeleteCollections = await client.ListCollection(db);
+            IList<CollectionInfo> afterDeleteCollections = await client.ListCollectionAsync(db);
             Assert.IsFalse(afterDeleteCollections.Any(c => c.Name == "CollectionToDelete"));
         }
 
@@ -157,7 +157,7 @@ namespace Textile.Threads.Client.Tests
             _ = await client.GetTokenAsync(user);
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
 
-            await Assert.ThrowsExceptionAsync<RpcException>(() => client.GetCollectionInfo(db, "Fake"));
+            await Assert.ThrowsExceptionAsync<RpcException>(() => client.GetCollectionInfoAsync(db, "Fake"));
         }
 
         [TestMethod]
@@ -168,9 +168,9 @@ namespace Textile.Threads.Client.Tests
             IThreadClient client = await factory.CreateClientAsync();
             _ = await client.GetTokenAsync(user);
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
-            await client.NewCollection(db, new Models.CollectionInfo() { Name = "PersonIndexes", Schema = JsonSchema.FromText(personSchema), Indexes = new List<Grpc.Index>() { new Grpc.Index() { Path = "age" } } });
+            await client.NewCollectionAsync(db, new Models.CollectionInfo() { Name = "PersonIndexes", Schema = JsonSchema.FromText(personSchema), Indexes = new List<Grpc.Index>() { new Grpc.Index() { Path = "age" } } });
 
-            IList<Grpc.Index> indexes = await client.GetCollectionIndexes(db, "PersonIndexes");
+            IList<Grpc.Index> indexes = await client.GetCollectionIndexesAsync(db, "PersonIndexes");
             Assert.AreEqual(1, indexes.Count);
         }
 
@@ -195,7 +195,7 @@ namespace Textile.Threads.Client.Tests
         }
 
         [TestMethod]
-        public async Task CreateResponseShouldContainAnInstancesList()
+        public async Task Save_Response_Should_Contain_An_Instances_List()
         {
             PrivateKey user = PrivateKey.FromRandom();
             IThreadClientFactory factory = ThreadClientFactory.Create();
@@ -203,10 +203,151 @@ namespace Textile.Threads.Client.Tests
             _ = await client.GetTokenAsync(user);
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
             CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
-            await client.NewCollection(db, collection);
+            await client.NewCollectionAsync(db, collection);
 
-            IList<string> instances = await client.Create(db, "Person", new[] { CreatePerson });
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
             Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+            person.Age = 30;
+
+            await client.SaveAsync(db, "Person", new[] { person });
+        }
+
+        [TestMethod]
+        public async Task Delete_Should_Delete_An_Existing_Instance()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            await client.DeleteAsync(db, "Person", new[] { person.Id });
+
+            bool nonExists = await client.Has(db, "Person", new[] { person.Id });
+            Assert.IsFalse(nonExists);
+        }
+
+        [TestMethod]
+        public async Task Has_Should_Return_True_With_Existing_Instances_And_False_With_Fake_Id()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            bool exists = await client.Has(db, "Person", new[] { person.Id });
+            Assert.IsTrue(exists);
+
+            bool nonExists = await client.Has(db, "Person", new[] { "FakeId" });
+            Assert.IsFalse(nonExists);
+        }
+
+
+        [TestMethod]
+        public async Task Find_Should_Return_Instance_From_Query()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            Query query = Query.Where("lastName").Eq(person.LastName);
+
+            IList<Person> results = await client.FindAsync<Person>(db, "Person", query);
+            Assert.IsTrue(results.Count >= 1);
+            Assert.AreEqual(person.Id, results.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        public async Task FindById_Should_Return_Instance_From()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            Person resultPerson = await client.FindByIdAsync<Person>(db, "Person", person.Id);
+            Assert.AreEqual(person.Id, resultPerson.Id);
+        }
+
+
+        [TestMethod]
+        public async Task ReadTransaction_Should_Work()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            ReadTransaction readTransaction = client.ReadTransaction(db, "Person");
+
+            await readTransaction.StartAsync();
+
+            bool exists = await readTransaction.HasAsync(new[] { person.Id });
+            Assert.IsTrue(exists);
+
+            Person foundPerson = await readTransaction.FindByIdAsync<Person>(person.Id);
+            Assert.AreEqual(person.Id, foundPerson.Id);
+            Assert.AreEqual(person.FirstName, foundPerson.FirstName);
+            Assert.AreEqual(person.LastName, foundPerson.LastName);
+            Assert.AreEqual(person.Age, foundPerson.Age);
+
+            Query query = Query.Where("lastName").Eq(person.LastName);
+            IList<Person> people = await readTransaction.FindAsync<Person>(query);
+            Assert.IsTrue(people.Count >= 1);
         }
     }
 }
