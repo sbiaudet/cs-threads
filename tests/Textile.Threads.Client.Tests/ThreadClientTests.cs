@@ -348,6 +348,8 @@ namespace Textile.Threads.Client.Tests
             Query query = Query.Where("lastName").Eq(person.LastName);
             IList<Person> people = await readTransaction.FindAsync<Person>(query);
             Assert.IsTrue(people.Count >= 1);
+
+            await readTransaction.EndAsync();
         }
     }
 }
