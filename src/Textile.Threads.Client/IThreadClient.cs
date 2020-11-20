@@ -31,5 +31,7 @@ namespace Textile.Threads.Client
         Task<bool> Has(ThreadId threadId, string collectionName, IEnumerable<string> values, CancellationToken cancellationToken = default);
         Task<T> FindByIdAsync<T>(ThreadId threadId, string collectionName, string instanceId, CancellationToken cancellationToken = default);
         ReadTransaction ReadTransaction(ThreadId threadId, string collectionName);
+        WriteTransaction WriteTransaction(ThreadId threadId, string collectionName);
+        Task VerifyAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default);
     }
 }

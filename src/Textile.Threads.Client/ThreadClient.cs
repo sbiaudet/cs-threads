@@ -81,7 +81,7 @@ namespace Textile.Threads.Client
             }
             else
             {
-                throw call.GetStatus().DebugException;
+                throw new InvalidOperationException(call.GetStatus().Detail);
             }
 
         }
@@ -246,8 +246,16 @@ namespace Textile.Threads.Client
             IEnumerable<ByteString> serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
             request.Instances.AddRange(serializedValues);
 
-            CreateReply reply = await _apiClient.CreateAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
-            return reply.InstanceIDs.ToList();
+            try
+            {
+                CreateReply reply = await _apiClient.CreateAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+                return reply.InstanceIDs.ToList();
+            }
+            catch (RpcException ex) when (ex.Status.Detail == "app denied net record body")
+            {
+                throw new InvalidOperationException(ex.Status.Detail);
+            }
         }
 
 
@@ -262,15 +270,37 @@ namespace Textile.Threads.Client
             IEnumerable<ByteString> serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
             request.Instances.AddRange(serializedValues);
 
-            SaveReply reply = await _apiClient.SaveAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
-
-            if (!string.IsNullOrEmpty(reply.TransactionError))
+            try
             {
-                throw new InvalidOperationException(reply.TransactionError);
+                SaveReply reply = await _apiClient.SaveAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            }
+            catch (RpcException ex) when (ex.Status.Detail == "app denied net record body")
+            {
+                throw new InvalidOperationException(ex.Status.Detail);
+            }
+        }
+
+        public async Task VerifyAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default)
+        {
+            VerifyRequest request = new()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+                CollectionName = collectionName
+            };
+
+            IEnumerable<ByteString> serializedValues = values.Select(v => ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes<T>(v)));
+            request.Instances.AddRange(serializedValues);
+
+            try
+            {
+                VerifyReply reply = await _apiClient.VerifyAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            }
+            catch (RpcException ex) when (ex.Status.Detail == "app denied net record body")
+            {
+                throw new InvalidOperationException(ex.Status.Detail);
             }
 
         }
-
         public async Task DeleteAsync(ThreadId threadId, string collectionName, IEnumerable<string> values, CancellationToken cancellationToken = default)
         {
             DeleteRequest request = new()
@@ -281,11 +311,13 @@ namespace Textile.Threads.Client
 
             request.InstanceIDs.AddRange(values);
 
-            DeleteReply reply = await _apiClient.DeleteAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
-
-            if (!string.IsNullOrEmpty(reply.TransactionError))
+            try
             {
-                throw new InvalidOperationException(reply.TransactionError);
+                DeleteReply reply = await _apiClient.DeleteAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            }
+            catch (RpcException ex)
+            {
+                throw new InvalidOperationException(ex.Status.Detail);
             }
         }
 
@@ -328,15 +360,18 @@ namespace Textile.Threads.Client
             };
 
             FindByIDReply reply = await _apiClient.FindByIDAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
-
             return JsonSerializer.Deserialize<T>(reply.Instance.ToStringUtf8());
         }
 
 
         public ReadTransaction ReadTransaction(ThreadId threadId, string collectionName)
         {
-
             return new ReadTransaction(_threadContext, _apiClient, threadId, collectionName);
+        }
+
+        public WriteTransaction WriteTransaction(ThreadId threadId, string collectionName)
+        {
+            return new WriteTransaction(_threadContext, _apiClient, threadId, collectionName);
         }
     }
 }

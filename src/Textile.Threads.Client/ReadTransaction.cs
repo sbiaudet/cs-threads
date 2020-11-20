@@ -13,39 +13,30 @@ using Textile.Threads.Core;
 
 namespace Textile.Threads.Client
 {
-    public class ReadTransaction
+    public class ReadTransaction : Transaction<ReadTransactionRequest, ReadTransactionReply>
     {
-        private readonly IThreadContext _threadContext;
-        private readonly API.APIClient _client;
-        private readonly ThreadId _threadId;
-        private readonly string _collectionName;
-        private AsyncDuplexStreamingCall<ReadTransactionRequest, ReadTransactionReply> _readCall;
 
-        public ReadTransaction(Context.IThreadContext threadContext, API.APIClient apiClient, ThreadId threadId, string collectionName)
+        public ReadTransaction(Context.IThreadContext threadContext, API.APIClient apiClient, ThreadId threadId, string collectionName) : base(threadContext, apiClient, threadId, collectionName)
         {
-            this._threadContext = threadContext;
-            _client = apiClient;
-            this._threadId = threadId;
-            this._collectionName = collectionName;
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken = default)
+        public override async Task StartAsync(CancellationToken cancellationToken = default)
         {
             ReadTransactionRequest startRequest = new()
             {
                 StartTransactionRequest = new()
                 {
-                    DbID = ByteString.CopyFrom(_threadId.Bytes),
-                    CollectionName = _collectionName,
+                    DbID = ByteString.CopyFrom(ThreadId.Bytes),
+                    CollectionName = CollectionName,
                 }
             };
 
-            this._readCall = _client.ReadTransaction(headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+            this.AsyncCall = Client.ReadTransaction(headers: ThreadContext.Metadata, cancellationToken: cancellationToken);
 
-            await _readCall.RequestStream.WriteAsync(startRequest);
+            await AsyncCall.RequestStream.WriteAsync(startRequest);
         }
 
-        public async Task<bool> HasAsync(IEnumerable<string> values, CancellationToken cancellationToken = default)
+        public override async Task<bool> HasAsync(IEnumerable<string> values, CancellationToken cancellationToken = default)
         {
             bool valuesExists = false;
 
@@ -53,8 +44,8 @@ namespace Textile.Threads.Client
             {
                 HasRequest = new()
                 {
-                    DbID = ByteString.CopyFrom(_threadId.Bytes),
-                    CollectionName = _collectionName
+                    DbID = ByteString.CopyFrom(ThreadId.Bytes),
+                    CollectionName = CollectionName
                 }
             };
 
@@ -62,7 +53,7 @@ namespace Textile.Threads.Client
 
             Task readTask = Task.Run(async () =>
             {
-                await foreach (ReadTransactionReply message in _readCall.ResponseStream.ReadAllAsync())
+                await foreach (ReadTransactionReply message in AsyncCall.ResponseStream.ReadAllAsync())
                 {
                     if (message.HasReply != null)
                     {
@@ -72,14 +63,14 @@ namespace Textile.Threads.Client
                 }
             }, cancellationToken);
 
-            await _readCall.RequestStream.WriteAsync(hasRequest);
+            await AsyncCall.RequestStream.WriteAsync(hasRequest);
 
             await readTask;
 
             return valuesExists;
         }
 
-        public async Task<T> FindByIdAsync<T>(string instanceId, CancellationToken cancellationToken = default)
+        public override async Task<T> FindByIdAsync<T>(string instanceId, CancellationToken cancellationToken = default)
         {
             T instance = default;
 
@@ -87,15 +78,15 @@ namespace Textile.Threads.Client
             {
                 FindByIDRequest = new()
                 {
-                    DbID = ByteString.CopyFrom(_threadId.Bytes),
-                    CollectionName = _collectionName,
+                    DbID = ByteString.CopyFrom(ThreadId.Bytes),
+                    CollectionName = CollectionName,
                     InstanceID = instanceId
                 }
             };
 
             Task readTask = Task.Run(async () =>
             {
-                await foreach (ReadTransactionReply message in _readCall.ResponseStream.ReadAllAsync())
+                await foreach (ReadTransactionReply message in AsyncCall.ResponseStream.ReadAllAsync())
                 {
                     if (message.FindByIDReply != null)
                     {
@@ -105,14 +96,14 @@ namespace Textile.Threads.Client
                 }
             }, cancellationToken);
 
-            await _readCall.RequestStream.WriteAsync(findByIDRequest);
+            await AsyncCall.RequestStream.WriteAsync(findByIDRequest);
 
             await readTask;
 
             return instance;
         }
 
-        public async Task<IList<T>> FindAsync<T>(Query query, CancellationToken cancellationToken = default)
+        public override async Task<IList<T>> FindAsync<T>(Query query, CancellationToken cancellationToken = default)
         {
             List<T> instances = new();
 
@@ -120,15 +111,15 @@ namespace Textile.Threads.Client
             {
                 FindRequest = new()
                 {
-                    DbID = ByteString.CopyFrom(_threadId.Bytes),
-                    CollectionName = _collectionName,
+                    DbID = ByteString.CopyFrom(ThreadId.Bytes),
+                    CollectionName = CollectionName,
                     QueryJSON = ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes(query))
                 }
             };
 
             Task readTask = Task.Run(async () =>
             {
-                await foreach (ReadTransactionReply message in _readCall.ResponseStream.ReadAllAsync())
+                await foreach (ReadTransactionReply message in AsyncCall.ResponseStream.ReadAllAsync())
                 {
                     if (message.FindReply != null)
                     {
@@ -138,16 +129,12 @@ namespace Textile.Threads.Client
                 }
             }, cancellationToken);
 
-            await _readCall.RequestStream.WriteAsync(findRequest);
+            await AsyncCall.RequestStream.WriteAsync(findRequest);
 
             await readTask;
 
             return instances;
         }
 
-        public Task EndAsync()
-        {
-            return _readCall.RequestStream.CompleteAsync();
-        }
     }
 }

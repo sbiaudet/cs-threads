@@ -217,27 +217,46 @@ namespace Textile.Threads.Client.Tests
         }
 
         [TestMethod]
-        public async Task Delete_Should_Delete_An_Existing_Instance()
+        public async Task Verify_Should_Verify_Instance_BeforeSave()
         {
+            string writeValidator = @"
+                var type = event.patch.type
+                var patch = event.patch.json_patch
+                switch (type) {
+                // Never allow deletion by anyone!
+                case ""delete"":
+                    return false
+                    default:
+                      // No person over the age of 50!
+                      // Note, this part could have been done using json-schema rules!
+                      if (patch.age > 50) {
+                        return false
+                      }
+                      // Otherwise, all good, let the schema validator take over
+                      return true
+                  }";
+
             PrivateKey user = PrivateKey.FromRandom();
             IThreadClientFactory factory = ThreadClientFactory.Create();
             IThreadClient client = await factory.CreateClientAsync();
             _ = await client.GetTokenAsync(user);
             ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
-            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            CollectionInfo collection = new() { Name = "Verified", Schema = JsonSchema.FromText(personSchema), WriteValidator = writeValidator };
             await client.NewCollectionAsync(db, collection);
 
             Person person = CreatePerson;
 
-            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            IList<string> instances = await client.CreateAsync(db, "Verified", new[] { person });
             Assert.IsTrue(instances.Count >= 1);
 
             person.Id = instances[0];
+            person.Age = 51;
 
-            await client.DeleteAsync(db, "Person", new[] { person.Id });
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => client.VerifyAsync(db, "Verified", new[] { person }));
 
-            bool nonExists = await client.Has(db, "Person", new[] { person.Id });
-            Assert.IsFalse(nonExists);
+            person.Age = 50;
+
+            await client.VerifyAsync(db, "Verified", new[] { person });
         }
 
         [TestMethod]
@@ -313,6 +332,32 @@ namespace Textile.Threads.Client.Tests
             Assert.AreEqual(person.Id, resultPerson.Id);
         }
 
+        [TestMethod]
+        public async Task FindById_With_ReadFilter_Should_Return_Filtere_Instance_From()
+        {
+            string readFilter = @" instance.firstName = ""Clyde""
+      return instance";
+
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema), ReadFilter = readFilter };
+            await client.NewCollectionAsync(db, collection);
+
+            Person person = CreatePerson;
+
+            IList<string> instances = await client.CreateAsync(db, "Person", new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            Person resultPerson = await client.FindByIdAsync<Person>(db, "Person", person.Id);
+            Assert.AreEqual(person.Id, resultPerson.Id);
+            Assert.AreEqual("Clyde", resultPerson.FirstName);
+        }
+
 
         [TestMethod]
         public async Task ReadTransaction_Should_Work()
@@ -350,6 +395,90 @@ namespace Textile.Threads.Client.Tests
             Assert.IsTrue(people.Count >= 1);
 
             await readTransaction.EndAsync();
+        }
+
+        [TestMethod]
+        public async Task WriteTransaction_Should_Work_As_Expected()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person existingPerson = CreatePerson;
+
+            IList<string> existingInstances = await client.CreateAsync(db, "Person", new[] { existingPerson });
+            Assert.IsTrue(existingInstances.Count >= 1);
+
+            existingPerson.Id = existingInstances[0];
+
+            WriteTransaction writeTransaction = client.WriteTransaction(db, "Person");
+
+            Person person = CreatePerson;
+
+            await writeTransaction.StartAsync();
+
+            IList<string> instances = await writeTransaction.CreateAsync(new[] { person });
+            Assert.IsTrue(instances.Count >= 1);
+
+            person.Id = instances[0];
+
+            bool exists = await writeTransaction.HasAsync(new[] { existingPerson.Id });
+            Assert.IsTrue(exists, "Person does not exist");
+
+            Person foundPerson = await writeTransaction.FindByIdAsync<Person>(existingPerson.Id);
+            Assert.IsNotNull(foundPerson);
+            Assert.AreEqual(existingPerson.Id, foundPerson.Id);
+            Assert.AreEqual(existingPerson.FirstName, foundPerson.FirstName);
+            Assert.AreEqual(existingPerson.LastName, foundPerson.LastName);
+            Assert.AreEqual(existingPerson.Age, foundPerson.Age);
+
+            Query query = Query.Where("lastName").Eq(existingPerson.LastName);
+            IList<Person> people = await writeTransaction.FindAsync<Person>(query);
+            Assert.IsTrue(people.Count >= 1);
+
+            await writeTransaction.VerifyAsync(new[] { existingPerson });
+
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => writeTransaction.VerifyAsync(new[] { new object() }));
+
+            existingPerson.Age = 99;
+            await writeTransaction.SaveAsync(new[] { existingPerson });
+
+            await writeTransaction.DeleteAsync(new[] { existingPerson.Id });
+
+            await writeTransaction.EndAsync();
+        }
+
+        [TestMethod]
+        public async Task WriteTransaction_Should_Not_Commit_A_Discarded_Transaction()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person existingPerson = CreatePerson;
+
+            IList<string> existingInstances = await client.CreateAsync(db, "Person", new[] { existingPerson });
+            Assert.IsTrue(existingInstances.Count >= 1);
+
+            existingPerson.Id = existingInstances[0];
+
+            WriteTransaction writeTransaction = client.WriteTransaction(db, "Person");
+            await writeTransaction.StartAsync();
+
+            existingPerson.Age = 99;
+            await writeTransaction.DiscardAsync();
+
+            await writeTransaction.SaveAsync(new[] { existingPerson });
+
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => writeTransaction.EndAsync());
         }
     }
 }
