@@ -38,18 +38,27 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.100
+
+    - name: Set build number 
+      run: echo "BuildNumber=$(( $GITHUB_RUN_NUMBER ))" >> $GITHUB_ENV    
+
     - name: Install dependencies
       run: dotnet restore
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
+
     - name: Test
       run: dotnet test --configuration Release --no-restore --no-build --verbosity normal
+
     - name: Pack
       run: dotnet pack --configuration Release --no-restore --no-build 
+      
     - name: publish
       run: dotnet nuget push './src/**/*.nupkg' -k ${{secrets.GITHUB_TOKEN}} -s https://nuget.pkg.github.com/sbiaudet/index.json
     
