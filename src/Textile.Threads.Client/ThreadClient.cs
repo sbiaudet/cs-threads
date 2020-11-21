@@ -19,13 +19,24 @@ using System.Runtime.CompilerServices;
 
 namespace Textile.Threads.Client
 {
-
+    /// <summary>
+    ///  <see cref="ThreadClient"/> is a gRPC wrapper client for communicating with a Threads server.
+    /// This client library can be used to interact with a local or remote Textile gRPC-service
+    /// It is a wrapper around Textile Thread's 'DB' API, which is defined here:
+    /// https://github.com/textileio/go-threads/blob/master/api/pb/api.proto.
+    /// </summary>
     public class ThreadClient : IThreadClient
     {
         private readonly IThreadContext _threadContext;
         private readonly IMapper _mapper;
         private readonly API.APIClient _apiClient;
 
+        /// <summary>
+        /// Initializes a new instance with the specified configuration.
+        /// </summary>
+        /// <param name="threadContext"></param>
+        /// <param name="mapper"></param>
+        /// <param name="apiClient"></param>
         public ThreadClient(IThreadContext threadContext, IMapper mapper, API.APIClient apiClient)
         {
             this._threadContext = threadContext;
@@ -33,11 +44,27 @@ namespace Textile.Threads.Client
             this._apiClient = apiClient;
         }
 
+        /// <summary>
+        /// Obtain a token per user (identity) for interacting with the remote API.
+        /// </summary>
+        /// <param name="identity">A user identity to use for creating records in the database. A random identity
+        /// can be created with `Client.randomIdentity(), however, it is not easy/possible to migrate
+        /// identities after the fact.Please store or otherwise persist any identity information if
+        /// you wish to retrieve user data later, or use an external identity provider.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public Task<string> GetTokenAsync(IIdentity identity, CancellationToken cancellationToken = default)
         {
             return GetTokenChallenge(identity.PublicKey.ToString(), challenge => Task.FromResult(identity.Sign(challenge)), cancellationToken);
         }
 
+        /// <summary>
+        /// Obtain a token per user (identity) for interacting with the remote API.
+        /// </summary>
+        /// <param name="publicKey"></param>
+        /// <param name="VerifySignature"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<string> GetTokenChallenge(string publicKey, Func<byte[], Task<byte[]>> VerifySignature, CancellationToken cancellationToken = default)
         {
             string token = string.Empty;
@@ -87,6 +114,13 @@ namespace Textile.Threads.Client
 
         }
 
+        /// <summary>
+        /// Creates a new store on the remote node.
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="name"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<ThreadId> NewDBAsync(ThreadId threadId, string name = null, CancellationToken cancellationToken = default)
         {
             ThreadId dbId = threadId ?? ThreadId.FromRandom();
@@ -106,6 +140,12 @@ namespace Textile.Threads.Client
             return dbId;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task DeleteDBAsync(ThreadId threadId, CancellationToken cancellationToken = default)
         {
             DeleteDBRequest request = new()
@@ -116,6 +156,11 @@ namespace Textile.Threads.Client
             await _apiClient.DeleteDBAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<IDictionary<string, GetDBInfoReply>> ListDBsAsync(CancellationToken cancellationToken = default)
         {
             ListDBsRequest request = new();
@@ -124,6 +169,12 @@ namespace Textile.Threads.Client
             return list.Dbs.ToDictionary(db => ThreadId.FromBytes(db.DbID.ToByteArray()).ToString(), db => db.Info);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="dbId">The ID of the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<DBInfo> GetDbInfoAsync(ThreadId dbId, CancellationToken cancellationToken = default)
         {
             GetDBInfoRequest request = new()
@@ -139,6 +190,14 @@ namespace Textile.Threads.Client
             };
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="address"></param>
+        /// <param name="key"></param>
+        /// <param name="collections"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<ThreadId> NewDbFromAdd(string address, string key, IList<Models.CollectionInfo> collections, CancellationToken cancellationToken = default)
         {
             Multiaddress addr = Multiaddress.Decode(address);
@@ -165,6 +224,13 @@ namespace Textile.Threads.Client
             return ThreadId.FromString(threadId);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">the ID of the database</param>
+        /// <param name="config"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task NewCollectionAsync(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
         {
             NewCollectionRequest request = new()
@@ -176,7 +242,13 @@ namespace Textile.Threads.Client
             await _apiClient.NewCollectionAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="config"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task UpdateCollectionAsync(ThreadId threadId, Models.CollectionInfo config, CancellationToken cancellationToken = default)
         {
             UpdateCollectionRequest request = new()
@@ -188,6 +260,13 @@ namespace Textile.Threads.Client
             await _apiClient.UpdateCollectionAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="name">The human-readable name for the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task DeleteCollectionAsync(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
             DeleteCollectionRequest request = new()
@@ -199,7 +278,13 @@ namespace Textile.Threads.Client
             await _apiClient.DeleteCollectionAsync(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="name">The human-readable name for the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<CollectionInfo> GetCollectionInfoAsync(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
             GetCollectionInfoRequest request = new()
@@ -212,6 +297,12 @@ namespace Textile.Threads.Client
             return _mapper.Map<CollectionInfo>(reply);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<IList<Models.CollectionInfo>> ListCollectionAsync(ThreadId threadId, CancellationToken cancellationToken = default)
         {
             ListCollectionsRequest request = new()
@@ -223,7 +314,13 @@ namespace Textile.Threads.Client
             return _mapper.Map<List<Models.CollectionInfo>>(reply.Collections.ToList());
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="name">The human-readable name for the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<IList<Grpc.Index>> GetCollectionIndexesAsync(ThreadId threadId, string name, CancellationToken cancellationToken = default)
         {
             GetCollectionIndexesRequest request = new()
@@ -236,6 +333,15 @@ namespace Textile.Threads.Client
             return reply.Indexes.ToList();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="values"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<IList<string>> CreateAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default)
         {
             CreateRequest request = new()
@@ -259,7 +365,15 @@ namespace Textile.Threads.Client
             }
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="values"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task SaveAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default)
         {
             SaveRequest request = new()
@@ -281,6 +395,15 @@ namespace Textile.Threads.Client
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="values"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task VerifyAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default)
         {
             VerifyRequest request = new()
@@ -302,6 +425,15 @@ namespace Textile.Threads.Client
             }
 
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="values"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task DeleteAsync(ThreadId threadId, string collectionName, IEnumerable<string> values, CancellationToken cancellationToken = default)
         {
             DeleteRequest request = new()
@@ -322,6 +454,14 @@ namespace Textile.Threads.Client
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="values"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<bool> Has(ThreadId threadId, string collectionName, IEnumerable<string> values, CancellationToken cancellationToken = default)
         {
             HasRequest request = new()
@@ -337,6 +477,15 @@ namespace Textile.Threads.Client
             return reply.Exists;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="query"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<IList<T>> FindAsync<T>(ThreadId threadId, string collectionName, Query query, CancellationToken cancellationToken = default)
         {
             FindRequest request = new()
@@ -351,6 +500,15 @@ namespace Textile.Threads.Client
             return reply.Instances.Select(i => JsonSerializer.Deserialize<T>(i.ToByteArray())).ToList();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <param name="instanceId"></param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async Task<T> FindByIdAsync<T>(ThreadId threadId, string collectionName, string instanceId, CancellationToken cancellationToken = default)
         {
             FindByIDRequest request = new()
@@ -364,6 +522,14 @@ namespace Textile.Threads.Client
             return JsonSerializer.Deserialize<T>(reply.Instance.ToStringUtf8());
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="listenOptions">The human-readable name for the database.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns></returns>
         public async IAsyncEnumerable<ListenAction<T>> ListenAsync<T>(ThreadId threadId, IEnumerable<ListenOption> listenOptions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             ListenRequest request = new()
@@ -400,11 +566,23 @@ namespace Textile.Threads.Client
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <returns></returns>
         public ReadTransaction ReadTransaction(ThreadId threadId, string collectionName)
         {
             return new ReadTransaction(_threadContext, _apiClient, threadId, collectionName);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="threadId">The ID of the database.</param>
+        /// <param name="collectionName">The human-readable name for the database.</param>
+        /// <returns></returns>
         public WriteTransaction WriteTransaction(ThreadId threadId, string collectionName)
         {
             return new WriteTransaction(_threadContext, _apiClient, threadId, collectionName);
