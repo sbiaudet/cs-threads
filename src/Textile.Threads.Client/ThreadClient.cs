@@ -15,6 +15,7 @@ using Multiformats.Address;
 using System.Text.Json;
 using Textile.Threads.Client.Models;
 using AutoMapper;
+using System.Runtime.CompilerServices;
 
 namespace Textile.Threads.Client
 {
@@ -363,6 +364,41 @@ namespace Textile.Threads.Client
             return JsonSerializer.Deserialize<T>(reply.Instance.ToStringUtf8());
         }
 
+        public async IAsyncEnumerable<ListenAction<T>> ListenAsync<T>(ThreadId threadId, IEnumerable<ListenOption> listenOptions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            ListenRequest request = new()
+            {
+                DbID = ByteString.CopyFrom(threadId.Bytes),
+            };
+
+            IEnumerable<ListenRequest.Types.Filter> filters = listenOptions.Select(o =>
+                 new ListenRequest.Types.Filter()
+                 {
+                     CollectionName = o.CollectionName,
+                     InstanceID = o.InstanceId ?? string.Empty,
+                     Action = (ListenRequest.Types.Filter.Types.Action)o.Action
+                 });
+
+            request.Filters.AddRange(filters);
+
+            using AsyncServerStreamingCall<ListenReply> call = _apiClient.Listen(request, headers: _threadContext.Metadata, cancellationToken: cancellationToken);
+
+            await foreach (ListenReply message in call.ResponseStream.ReadAllAsync(cancellationToken))
+            {
+                if (message != null)
+                {
+                    ListenAction<T> action = new()
+                    {
+                        Collection = message.CollectionName,
+                        Action = (ActionType)message.Action,
+                        InstanceId = message.InstanceID,
+                        Instance = JsonSerializer.Deserialize<T>(message.Instance.ToStringUtf8())
+                    };
+
+                    yield return action;
+                }
+            }
+        }
 
         public ReadTransaction ReadTransaction(ThreadId threadId, string collectionName)
         {

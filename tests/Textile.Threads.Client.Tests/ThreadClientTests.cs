@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -479,6 +480,66 @@ namespace Textile.Threads.Client.Tests
             await writeTransaction.SaveAsync(new[] { existingPerson });
 
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => writeTransaction.EndAsync());
+        }
+
+        [TestMethod]
+        public async Task Listen_Should_Work_As_Expected()
+        {
+            PrivateKey user = PrivateKey.FromRandom();
+            IThreadClientFactory factory = ThreadClientFactory.Create();
+            IThreadClient client = await factory.CreateClientAsync();
+            _ = await client.GetTokenAsync(user);
+            ThreadId db = await client.NewDBAsync(ThreadId.FromRandom());
+            CollectionInfo collection = new() { Name = "Person", Schema = JsonSchema.FromText(personSchema) };
+            await client.NewCollectionAsync(db, collection);
+
+            Person existingPerson = CreatePerson;
+
+            IList<string> existingInstances = await client.CreateAsync(db, "Person", new[] { existingPerson });
+            Assert.IsTrue(existingInstances.Count >= 1);
+
+            existingPerson.Id = existingInstances[0];
+
+            CancellationTokenSource listenSource = new();
+
+            bool listenFinished = false;
+
+            Task listenTask = Task.Run(async () =>
+            {
+                IAsyncEnumerable<ListenAction<Person>> listener = client.ListenAsync<Person>(db,
+                  new[] {
+                    new ListenOption() {
+                        CollectionName = "Person",
+                        Action = ActionType.All
+                    }
+                  }, listenSource.Token);
+
+                IAsyncEnumerator<ListenAction<Person>> iterator = listener.GetAsyncEnumerator();
+
+                await iterator.MoveNextAsync();
+                ListenAction<Person> listenAction = iterator.Current;
+                Assert.AreEqual(existingPerson.Id, listenAction.InstanceId);
+                Assert.AreEqual(30, listenAction.Instance.Age);
+
+                await iterator.MoveNextAsync();
+                listenAction = iterator.Current;
+                Assert.AreEqual(existingPerson.Id, listenAction.InstanceId);
+                Assert.AreEqual(40, listenAction.Instance.Age);
+
+                listenSource.Cancel();
+                listenFinished = true;
+            });
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            existingPerson.Age = 30;
+            await client.SaveAsync(db, "Person", new[] { existingPerson });
+
+            existingPerson.Age = 40;
+            await client.SaveAsync(db, "Person", new[] { existingPerson });
+
+            await listenTask;
+
+            Assert.IsTrue(listenFinished, "Listen is not finished correctly");
         }
     }
 }

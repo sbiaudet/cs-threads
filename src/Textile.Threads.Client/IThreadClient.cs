@@ -6,6 +6,7 @@ using Textile.Threads.Client.Grpc;
 using Textile.Threads.Core;
 using Textile.Threads.Client.Models;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace Textile.Threads.Client
 {
@@ -33,5 +34,6 @@ namespace Textile.Threads.Client
         ReadTransaction ReadTransaction(ThreadId threadId, string collectionName);
         WriteTransaction WriteTransaction(ThreadId threadId, string collectionName);
         Task VerifyAsync<T>(ThreadId threadId, string collectionName, IEnumerable<T> values, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<ListenAction<T>> ListenAsync<T>(ThreadId threadId, IEnumerable<ListenOption> listenOptions, CancellationToken cancellationToken = default);
     }
 }
