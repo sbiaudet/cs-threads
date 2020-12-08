@@ -60,5 +60,5 @@ jobs:
       run: dotnet pack --configuration Release --no-restore --no-build 
       
     - name: publish
-      run: dotnet nuget push './src/**/*.nupkg' -u sbiaudet -k ${{secrets.GITHUB_TOKEN}} -s https://nuget.pkg.github.com/sbiaudet/index.json
+      run: dotnet nuget push './src/**/*.nupkg' -k ${{secrets.GITHUB_TOKEN}} -s https://nuget.pkg.github.com/sbiaudet/index.json
     
