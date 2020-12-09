@@ -13,7 +13,7 @@
       <!-- Common NuGet properties-->
       
       <!-- This is used by GitHub Repository to find which repository should contain the package when updloaded -->
-      <RepositoryUrl>https://github.com/sbiaudet/cs-thread</RepositoryUrl>
+      <RepositoryUrl>https://github.com/sbiaudet/cs-threads</RepositoryUrl>
       
     </PropertyGroup>
   
